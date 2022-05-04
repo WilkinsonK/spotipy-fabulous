@@ -13,43 +13,20 @@ import base64
 import logging
 import os
 import time
+import urllib.parse as urllibparse
 import warnings
 import webbrowser
 
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import parse_qsl, urlparse
+
 import requests
-# Workaround to support both python 2 & 3
-import six
-import six.moves.urllib.parse as urllibparse
-from six.moves.BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-from six.moves.urllib_parse import parse_qsl, urlparse
 
 from spotipy.cache_handler import CacheFileHandler, CacheHandler
+from spotipy.errors import SpotifyOAuthError, SpotifyStateError
 from spotipy.util import CLIENT_CREDS_ENV_VARS, get_host_port, normalize_scope
 
 logger = logging.getLogger(__name__)
-
-
-class SpotifyOauthError(Exception):
-    """ Error during Auth Code or Implicit Grant flow """
-
-    def __init__(self, message, error=None, error_description=None, *args, **kwargs):
-        self.error = error
-        self.error_description = error_description
-        self.__dict__.update(kwargs)
-        super(SpotifyOauthError, self).__init__(message, *args, **kwargs)
-
-
-class SpotifyStateError(SpotifyOauthError):
-    """ The state sent and state recieved were different """
-
-    def __init__(self, local_state=None, remote_state=None, message=None,
-                 error=None, error_description=None, *args, **kwargs):
-        if not message:
-            message = ("Expected " + local_state + " but recieved "
-                       + remote_state)
-        super(SpotifyOauthError, self).__init__(message, error,
-                                                error_description, *args,
-                                                **kwargs)
 
 
 def _make_authorization_headers(client_id, client_secret):
@@ -67,7 +44,7 @@ def _ensure_value(value, env_key):
             env_key,
             env_val,
         )
-        raise SpotifyOauthError(msg)
+        raise SpotifyOAuthError(msg)
     return _val
 
 
@@ -421,7 +398,7 @@ class SpotifyOAuth(SpotifyAuthBase):
         query_s = urlparse(url).query
         form = dict(parse_qsl(query_s))
         if "error" in form:
-            raise SpotifyOauthError("Received error from auth server: "
+            raise SpotifyOAuthError("Received error from auth server: "
                                     "{}".format(form["error"]),
                                     error=form["error"])
         return tuple(form.get(param) for param in ["state", "code"])
@@ -465,7 +442,7 @@ class SpotifyOAuth(SpotifyAuthBase):
         elif server.auth_code is not None:
             return server.auth_code
         else:
-            raise SpotifyOauthError("Server listening on localhost has not been accessed")
+            raise SpotifyOAuthError("Server listening on localhost has not been accessed")
 
     def get_auth_response(self, open_browser=None):
         logger.info('User authentication requires interaction with your '
