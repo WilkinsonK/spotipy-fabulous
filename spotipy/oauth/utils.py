@@ -92,6 +92,16 @@ def token_expired(token_data: dict[str, typing.Any]):
     return (token_data["expires_at"] - now) < 60
 
 
+def set_expires_at(token_data: dict[str, typing.Any]):
+    """
+    Sets the time the current token
+    will expire on.
+    """
+
+    now = int(time.time())
+    token_data["expires_at"] = now + token_data["expires_in"]
+
+
 def scope_is_subset(subset: str, scope: str):
     """
     Determines if the `subset` is
