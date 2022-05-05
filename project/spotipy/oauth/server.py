@@ -2,6 +2,9 @@ import http
 import http.server as server
 import pathlib
 import typing
+import urllib.parse as parse
+
+from spotipy import errors
 
 
 # Templates used for generating responses
@@ -16,9 +19,9 @@ TEMPLATES = {
     "failure": (TEMPLATE_ROOT / "failure.html")
 }
 
-BASIC_REPONSE_HEADERS = {
-    "Content-Type": "text-html"
-}
+BASIC_REPONSE_HEADERS = (
+    ("Content-Type", "text-html"),
+)
 
 # Used to encode incoming template
 # data.
@@ -28,30 +31,63 @@ BASIC_RESPONSE_ENCODING = "utf-8"
 class SpotifyHTTPServer(server.HTTPServer):
     auth_code:       typing.Optional[int]
     auth_token_form: typing.Optional[str | bytes]
-    error:           typing.Optional[str]
+    error:           typing.Optional[errors.SpotifyHttpError]
+    state:           typing.Optional[str]
 
 
 class SpotifyRequestHandler(server.BaseHTTPRequestHandler):
     server: SpotifyHTTPServer
 
     def do_GET(self):
-        server = self.server
+        serv = self.server
 
-        server.auth_code, server.error = None, None
-
+        parse_url_response(self)
         self.send_response(200)
-        self.send_header(BASIC_REPONSE_HEADERS)
+        for keyword, value in BASIC_REPONSE_HEADERS:
+            self.send_header(keyword, value)
         self.end_headers()
 
-        if not any([server.auth_code, server.error]):
+        if not any([serv.auth_code, serv.error]):
             data = TEMPLATES["failure"].read_bytes()
         else:
             status = "successful"
-            if server.error:
-                status = f"failed ({server.error})"
+            if serv.error:
+                status = f"failed ({serv.error})"
             data = TEMPLATES["success"].read_text().format(status=status)
 
         write_response_html(self, data)
+
+
+# Here lies the fields expected
+# of the inbound authorization
+# form.
+EXPECTED_FORM_FIELDS = (
+    "state",
+    "code"
+)
+
+
+def parse_url_response(handler: SpotifyRequestHandler):
+    """
+    Parse the target values in
+    the response form.
+    """
+
+    result = parse.urlparse(handler.path)
+    form   = dict(parse.parse_qsl(result.query))
+
+    if "error" in form:
+        status = http.HTTPStatus(500)
+        server.error = errors.SpotifyOAuthError("",
+            reason=status.description,
+            code=status.value,
+            http_status=status.phrase)
+        return
+
+    state, code = [form.get(f) for f in EXPECTED_FORM_FIELDS]
+
+    handler.server.auth_code = code
+    handler.server.state     = state
 
 
 def write_response_html(handler: SpotifyRequestHandler, data: str | bytes):
@@ -83,5 +119,6 @@ def make_server(port: int, *,
     app.auth_code       = None
     app.auth_token_form = None
     app.error           = None
+    app.state           = None
 
     return app

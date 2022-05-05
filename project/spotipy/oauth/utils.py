@@ -57,6 +57,54 @@ def normalize_string(value: str):
     return EXPECTED_ENV_PREFIX.sub("", value).lower().replace("-", "_")
 
 
+# Used in the event no initial path is passed
+# to `make_cache_path`. This ensures the file
+# path is never empty.
+DEFAULT_CACHE_PATH = ".cache"
+
+
+def make_cache_path(path: os.PathLike = None, *ids: str) -> str:
+    """
+    Generate a path for some cache file.
+    """
+
+    if not path:
+        path = DEFAULT_CACHE_PATH
+
+    # Filter out any undefined or null
+    # values. Join the remaining to
+    # the filepath.
+    ids = [idx for idx in ids if idx]
+    if len(ids):
+        path = "-".join([path, *ids])
+
+    return path
+
+
+# Represents the expected form
+# a callable should take to qualify
+# for use in filtering.
+T             = typing.TypeVar("T")
+ConditionType = typing.Callable[[T | None], bool]
+Condition     = typing.TypeVar("Condition", bound=ConditionType)
+
+
+def normalize_payload(payload: dict[str, typing.Any], *,
+    condition: Condition = None):
+    """
+    Filter out any fields in the payload
+    that do not meet the condition.
+    """
+
+    if not condition:
+        condition = lambda o: bool(o)
+    return {k:v for k,v in payload.items() if condition(v)}
+
+
+"""                        #|
+---- Scope Manipulation ----|
+"""                        #|
+
 # Identify values in a string separated
 # either by a single space or a comma.
 EXPECTED_SCOPE_FORMAT = re.compile(r"\w+[, ]{1}")
@@ -83,26 +131,6 @@ def normalize_scope(value: str):
     return " ".join(value)
 
 
-def token_expired(token_data: dict[str, typing.Any]):
-    """
-    Determines whether the current token
-    has expired yet or not.
-    """
-
-    now = int(time.time())
-    return (token_data["expires_at"] - now) < 60
-
-
-def set_expires_at(token_data: dict[str, typing.Any]):
-    """
-    Sets the time the current token
-    will expire on.
-    """
-
-    now = int(time.time())
-    token_data["expires_at"] = now + token_data["expires_in"]
-
-
 def scope_is_subset(subset: str, scope: str):
     """
     Determines if the `subset` is
@@ -115,8 +143,38 @@ def scope_is_subset(subset: str, scope: str):
     return subset <= scope
 
 
-class SpotifySession(requests.Session):
-    pass
+"""                        #|
+---- Token Manipulation ----|
+"""                        #|
+
+
+def token_expired(token_data: dict[str, typing.Any]):
+    """
+    Determines whether the current token
+    has expired yet or not.
+    """
+
+    now = int(time.time())
+    return (token_data["expires_at"] - now) < 60
+
+
+def token_data_valid(token_data: dict[str, typing.Any]):
+    return token_data and not token_expired(token_data)
+
+
+def set_expires_at(token_data: dict[str, typing.Any]):
+    """
+    Sets the time the current token
+    will expire on.
+    """
+
+    now = int(time.time())
+    token_data["expires_at"] = now + token_data["expires_in"]
+
+
+"""                            #|
+---- Credentials Management ----|
+"""                            #|
 
 
 @dataclasses.dataclass(slots=True)
@@ -125,6 +183,8 @@ class SpotifyCredentials:
     client_secret:   str
     redirect_url:    str
     client_username: str
+    scope:           str | None = None
+    state:           str | None = None
 
 
 def make_credentials(
@@ -138,6 +198,15 @@ def make_credentials(
     """
 
     return SpotifyCredentials(client_id, client_secret, redirect_url, username)
+
+
+"""              #|
+---- Sessions ----|
+"""              #|
+
+
+class SpotifySession(requests.Session):
+    pass
 
 
 class SessionFactory(typing.Protocol):
@@ -190,34 +259,10 @@ def handle_http_error(error: requests.HTTPError):
         error_message     = resp.txt or None
         error_description = None
     else:
-        error_message     = payload["error"]
-        error_description = payload["error_description"]
+        error_message     = payload.get("error", None)
+        error_description = payload.get("error_description", None)
 
     raise errors.SpotifyOAuthError(error_message,
-        reason=error_description,
-        code=resp.status_code,
-        http_status=status.description)
-
-
-# Used in the event no initial path is passed
-# to `make_cache_path`. This ensures the file
-# path is never empty.
-DEFAULT_CACHE_PATH = ".cache"
-
-
-def make_cache_path(path: os.PathLike = None, *ids: str) -> str:
-    """
-    Generate a path for some cache file.
-    """
-
-    if not path:
-        path = DEFAULT_CACHE_PATH
-
-    # Filter out any undefined or null
-    # values. Join the remaining to
-    # the filepath.
-    ids = [idx for idx in ids if idx]
-    if len(ids):
-        path = "-".join([path, *ids])
-
-    return path
+        reason=error_description or status.description,
+        code=status.value,
+        http_status=status.phrase)

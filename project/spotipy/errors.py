@@ -14,7 +14,7 @@ class HttpExceptionValues(ExceptionValues):
 
     # Optionals
     reason:  str            = field(default=None)
-    headers: dict[str, Any] = field(default_factory={})
+    headers: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -55,7 +55,7 @@ class SpotifyHttpError(SpotifyException):
     """
 
     template   = (
-        "http_status: {http_status} code: {code}; {message} reason: {reason}")
+        "[{code} {http_status}] '{message}': '{reason}'")
     values_cls = HttpExceptionValues
 
 

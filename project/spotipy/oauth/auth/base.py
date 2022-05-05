@@ -19,7 +19,8 @@ class SpotifyBaseAuthenticator:
         self._credentials = utils.make_credentials(None, None)
 
     def __del__(self):
-        self._session.close()
+        if hasattr(self._session, "close"):
+            self._session.close()
 
     @property
     def session(self):
