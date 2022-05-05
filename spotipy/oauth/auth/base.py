@@ -7,10 +7,6 @@ class SpotifyBaseAuthenticator:
     clients and the `Spotify API`.
     """
 
-    __slots__ = (
-        "_session", "_credentials", "__oauth_token_url",
-        "__oauth_authorize_url")
-
     __oauth_token_url:     str = "https://accounts.spotify.com/api/token"
     __oauth_authorize_url: str = "https://accounts.spotify.com/authorize"
 

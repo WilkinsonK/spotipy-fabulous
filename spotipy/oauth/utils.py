@@ -1,6 +1,7 @@
 import base64
 import dataclasses
 import http
+import os
 import re
 import time
 import types
@@ -196,3 +197,27 @@ def handle_http_error(error: requests.HTTPError):
         reason=error_description,
         code=resp.status_code,
         http_status=status.description)
+
+
+# Used in the event no initial path is passed
+# to `make_cache_path`. This ensures the file
+# path is never empty.
+DEFAULT_CACHE_PATH = ".cache"
+
+
+def make_cache_path(path: os.PathLike = None, *ids: str) -> str:
+    """
+    Generate a path for some cache file.
+    """
+
+    if not path:
+        path = DEFAULT_CACHE_PATH
+
+    # Filter out any undefined or null
+    # values. Join the remaining to
+    # the filepath.
+    ids = [idx for idx in ids if idx]
+    if len(ids):
+        path = "-".join([path, *ids])
+
+    return path

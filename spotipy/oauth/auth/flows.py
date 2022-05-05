@@ -13,7 +13,8 @@ class SpotifyAuthFlow(typing.Protocol):
         """
 
 
-class BaseAuthFlow(base.SpotifyBaseAuthenticator):
+class BaseAuthFlow(base.SpotifyBaseAuthenticator, abc.ABC):
+
         def __init__(self,
             client_id: str = None,
             client_secret: str = None,
@@ -36,6 +37,7 @@ class BaseAuthFlow(base.SpotifyBaseAuthenticator):
             # Homeless attributes.
             self.timeout = timeout
 
+        @abc.abstractmethod
         def get_access_token(self) -> str:
             """
             Retrieves an access token from the `Spotify API`
