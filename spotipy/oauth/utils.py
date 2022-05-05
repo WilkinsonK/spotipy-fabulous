@@ -36,7 +36,7 @@ EXPECTED_CREDENTIALS = (
 EXPECTED_ENV_PREFIX = re.compile(r"^(SPOTIFY|spotify)_*")
 
 
-def normalize_credential(value: str):
+def normalize(value: str):
     """
     Ensure the passed in value is
     normalized to be used as a keyword
