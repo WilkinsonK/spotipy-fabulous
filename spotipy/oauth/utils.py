@@ -10,7 +10,7 @@ import typing
 import requests
 import requests.api
 
-import spotipy.errors as errors
+from spotipy import errors
 
 
 # Used to encode, and then decode

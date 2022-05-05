@@ -1,4 +1,4 @@
-import spotipy.oauth.utils as utils
+from spotipy.oauth import utils
 
 
 class SpotifyBaseAuthenticator:
