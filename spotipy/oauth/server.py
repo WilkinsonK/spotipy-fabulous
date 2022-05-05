@@ -1,7 +1,7 @@
 import http
 import http.server as server
-import inspect
 import pathlib
+import typing
 
 
 # Templates used for generating responses
@@ -25,7 +25,14 @@ BASIC_REPONSE_HEADERS = {
 BASIC_RESPONSE_ENCODING = "utf-8"
 
 
-class BasicRequestHandler(server.BaseHTTPRequestHandler):
+class SpotifyHTTPServer(server.HTTPServer):
+    auth_code:       typing.Optional[int]
+    auth_token_form: typing.Optional[str | bytes]
+    error:           typing.Optional[str]
+
+
+class SpotifyRequestHandler(server.BaseHTTPRequestHandler):
+    server: SpotifyHTTPServer
 
     def do_GET(self):
         server = self.server
@@ -47,7 +54,7 @@ class BasicRequestHandler(server.BaseHTTPRequestHandler):
         write_response_html(self, data)
 
 
-def write_response_html(handler: BasicRequestHandler, data: str | bytes):
+def write_response_html(handler: SpotifyRequestHandler, data: str | bytes):
     """
     Write to the target `RequestHandler`'s
     stream.
@@ -58,28 +65,23 @@ def write_response_html(handler: BasicRequestHandler, data: str | bytes):
     handler.wfile.write(data)
 
 
-HTTP_DEFAULT_HANDLER = BasicRequestHandler
-HTTP_DEFAULT_SERVER  = server.HTTPServer
-HTTP_LOCAL_ADDRESS   = "127.0.0.1"
-
-
 def make_server(port: int, *,
-    handler_cls: type[BasicRequestHandler] = None,
-    server_cls: type[server.HTTPServer] = None):
+    handler_cls: type[SpotifyRequestHandler] = None,
+    server_cls: type[SpotifyHTTPServer] = None):
     """
     Creates a local HTTP server.
     """
 
     if not handler_cls:
-        handler_cls = HTTP_DEFAULT_HANDLER
+        handler_cls = SpotifyRequestHandler
     if not server_cls:
-        server_cls = HTTP_DEFAULT_SERVER
+        server_cls = SpotifyHTTPServer
 
-    app = server_cls((HTTP_LOCAL_ADDRESS, port), handler_cls)
+    app = server_cls(("127.0.0.1", port), handler_cls)
     app.allow_reuse_address = True
 
     app.auth_code       = None
     app.auth_token_form = None
     app.error           = None
 
-    return server
+    return app

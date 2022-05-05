@@ -18,13 +18,7 @@ class HttpExceptionValues(ExceptionValues):
 
 
 @dataclass
-class OAuthExceptionValues(ExceptionValues):
-    error:             str = field(default=None)
-    error_description: str = field(default=None)
-
-
-@dataclass
-class StateExceptionValues(OAuthExceptionValues):
+class StateExceptionValues(HttpExceptionValues):
     local_state:  str = field(default=None)
     remote_state: str = field(default=None)
 
@@ -65,28 +59,20 @@ class SpotifyHttpError(SpotifyException):
     values_cls = HttpExceptionValues
 
 
-class SpotifyAuthException(SpotifyException):
-    """
-    Raise for authentication errors.
-    """
 
-
-class SpotifyOAuthError(SpotifyAuthException):
+class SpotifyOAuthError(SpotifyHttpError):
     """
     Raised for errors during OAuth authentication.
     """
 
-    template   = "{error}; {error_description}: {message}"
-    values_cls = OAuthExceptionValues
 
-
-class SpotifyStateError(SpotifyOAuthError):
+class SpotifyStateError(SpotifyHttpError):
     """
     Raised when the state sent differs from the
     state recieved.
     """
 
     template   = (
-        SpotifyOAuthError.template +
+        SpotifyHttpError.template +
         "\n\texpected {local_state} but recieved {remote_state}")
     values_cls = StateExceptionValues
