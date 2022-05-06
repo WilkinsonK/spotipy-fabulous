@@ -2,7 +2,6 @@ import abc
 import http
 import os
 import typing
-
 import urllib.parse as urlparse
 import webbrowser
 
@@ -22,6 +21,12 @@ class SpotifyAuthFlow(typing.Protocol):
 
 
 class BaseAuthFlow(base.SpotifyBaseAuthenticator, abc.ABC):
+
+        # Including this here to
+        # signify this needful.
+        # all other `AuthFlow`s should
+        # be expected to have this attr.
+        token_payload: dict[str, str]
 
         def __init__(self, client_id: str, client_secret: str, *,
             proxies: dict[str, str] = None,
@@ -59,25 +64,8 @@ class BaseAuthFlow(base.SpotifyBaseAuthenticator, abc.ABC):
             Retrieves an access token from the `Spotify API`
             """
 
-        def validate_token(self, token_data: utils.TokenData) -> bool:
-            """
-            Ensure the given token is valid.
-            """
 
-            if not utils.token_data_valid(token_data):
-                return False
-
-            if "scope" not in token_data:
-                return False
-
-            scope  = self.credentials.scope
-            if not utils.scope_is_subset(token_data, scope):
-                return False
-
-            return True
-
-
-def get_token_data(auth_flow: BaseAuthFlow, payload: dict[str, typing.Any]):
+def _get_token_data(auth_flow: BaseAuthFlow, payload: dict[str, typing.Any]):
     """
     Sends an outbound auth call requesting
     for a token.
@@ -108,6 +96,89 @@ def get_token_data(auth_flow: BaseAuthFlow, payload: dict[str, typing.Any]):
         return token_data
 
 
+class TokenPayloadFactory(typing.Protocol):
+    """
+    A useful pre-get_token_data hook.
+    Intended for the user to manipulate
+    the request payload before the
+    callout.
+    """
+
+    @staticmethod
+    def __call__() -> dict[str, typing.Any]:
+        ...
+
+
+def basic_payload_factory():
+    """
+    Returns a dummy payload with no data.
+    """
+
+    return {}
+
+
+def get_token_data(
+    auth_flow: BaseAuthFlow,
+    cursor: cache.SpotifyCacheHandler,
+    payload_factory: TokenPayloadFactory = None):
+    """
+    Retrieves an access token from the
+    `Spotify API`. This function first checks,
+    and validates for token data that
+    may have been previously cached.
+    """
+
+    ts = utils.TokenState
+
+    # Initial lookup for a token from
+    # the `auth_flow`'s cache handler.
+    token_data = cursor.find_token_data()
+
+    # Validate the token data found.
+    # not unlike for parking...
+    scope        = auth_flow.credentials.scope
+    token_state  = utils.validate_token(token_data, auth_scope=scope)
+
+    if token_state is ts.VALID:
+        return token_data
+
+    if token_state is ts.REFRESH:
+        payload = {
+            "refresh_token": token_data["refresh_token"],
+            "grant_type": "refresh_token"
+        }
+    else:
+        if not payload_factory:
+            payload_factory = basic_payload_factory
+        payload = payload_factory()
+
+    # Token either required a refresh
+    # or was invalid. Get new token data
+    # and try again.
+    token_data = _get_token_data(auth_flow, payload)
+    if "scope" not in token_data:
+        token_data["scope"] = scope
+    cursor.save_token_data(token_data)
+
+    return get_token_data(auth_flow, cursor, payload_factory)
+
+
+def find_token_data(
+    auth_flow: BaseAuthFlow,
+    factory: TokenPayloadFactory) -> utils.TokenData:
+    """
+    Find valid auth token data.
+    """
+
+    # Args required to open the cache
+    # pool.
+    hcls, hkwds = auth_flow.cache_cls, auth_flow.cache_params
+
+    with cache.SpotifyCachePool(hcls, hkwds=hkwds) as cpool:
+        curs = cpool.new()
+        return get_token_data(auth_flow, curs, factory)
+
+
 def get_host_info(result: urlparse.ParseResult):
     """
     Retrieves host and port information
@@ -120,6 +191,63 @@ def get_host_info(result: urlparse.ParseResult):
 # Represents list of expected aliases
 # for the localhost.
 LOCAL_HOST_NAMES = ("127.0.0.1", "localhost")
+
+
+def local_auth_response(auth_flow: BaseAuthFlow, port: int):
+    """
+    Attempt to get authentication
+    from the user's browser.
+    """
+
+    serv  = server.make_server(port)
+    creds = auth_flow.credentials
+
+    webbrowser.open(auth_flow.authorize_url)
+    serv.handle_request()
+
+    if serv.error:
+        raise serv.error
+
+    # Ensure the state received
+    # matches the state sent.
+    if creds.state and (serv.state != creds.state):
+        status = http.HTTPStatus(500)
+        raise errors.SpotifyStateError("",
+            reason=status.name,
+            code=status.value,
+            http_status=status.description,
+            local_state=creds.state,
+            remote_state=serv.state)
+
+    if serv.auth_code:
+        return serv.auth_code
+
+    # If failure to obtain an auth code,
+    # throw an auth error.
+    status = http.HTTPStatus(500)
+    raise errors.SpotifyOAuthError(
+        "Server listening on localhost was never accessed!",
+        reason=status.description,
+        code=status.value,
+        http_status=status.phrase)
+
+
+def get_auth_response(auth_flow: BaseAuthFlow):
+    """
+    Requests authentication from the
+    user. This requires interaction
+    with a web browser.
+    """
+
+    result     = urlparse.urlparse(auth_flow.credentials.redirect_url)
+    host, port = get_host_info(result)
+
+    # If we anticipate an HTTP server
+    # on the local machine, create that
+    # server.
+    if host in LOCAL_HOST_NAMES and result.scheme == "http":
+        port = port or 8080
+        return local_auth_response(auth_flow, port)
 
 
 class ClientCredentialsFlow(BaseAuthFlow):
@@ -136,20 +264,11 @@ class ClientCredentialsFlow(BaseAuthFlow):
     """
 
     def get_access_token(self) -> str:
-        with cache.SpotifyCachePool(
-            self.cache_cls, hkwds=self.cache_params) as cpool:
 
-            cursor     = cpool.new()
-            token_data = cursor.find_token_data()
+        def factory():
+            return {"grant_type": "client_credentials"}
 
-            # If a valid token is found,
-            # return that value.
-            if not self.validate_token(token_data):
-                payload    = {"grant_type": "client_credentials"}
-                token_data = get_token_data(self, payload)
-                cursor.save_token_data(token_data)
-
-            return token_data["access_token"]
+        return find_token_data(self, factory)["access_token"]
 
 
 class AuthorizationFlow(BaseAuthFlow):
@@ -223,81 +342,17 @@ class AuthorizationFlow(BaseAuthFlow):
         params = urlparse.urlencode(payload)
         return "?".join([super().authorize_url, params])
 
-    def get_access_token(self, status_code: http.HTTPStatus = None) -> str:
-        with cache.SpotifyCachePool(
-            self.cache_cls, hkwds=self.cache_params) as cpool:
+    def get_access_token(self, status_code: int = None) -> str:
+        
+        def factory(code=status_code):
+            if not code:
+                code = get_auth_response(self)
+            return utils.normalize_payload({
+                "redirect_uri": self.credentials.redirect_url,
+                "grant_type": "authorization_code",
+                "code": code,
+                "scope": self.credentials.scope,
+                "state": self.credentials.state
+            })
 
-            cursor     = cpool.new()
-            token_data = cursor.find_token_data()
-
-            # If a valid token is found,
-            # return that value.
-            if not utils.token_data_valid(token_data):
-                if not status_code:
-                    status_code = self.get_auth_response()
-
-                payload = utils.normalize_payload({
-                    "code": status_code,
-                    "redirect_uri": self.credentials.redirect_url,
-                    "grant_type": "authorization_code",
-                    "scope": self.credentials.scope,
-                    "state": self.credentials.state
-                })
-                token_data = get_token_data(self, payload)
-                cursor.save_token_data(token_data)
-
-            return token_data["access_token"]
-
-    def get_auth_response(self):
-        """
-        Requests authentication from the
-        user. This requires interaction
-        with a web browser.
-        """
-
-        result     = urlparse.urlparse(self.credentials.redirect_url)
-        host, port = get_host_info(result)
-
-        # If we anticipate an HTTP server
-        # on the local machine, create that
-        # server.
-        if host in LOCAL_HOST_NAMES and result.scheme == "http":
-            port = port or 8080
-            return self.local_auth_response(port)
-
-    def local_auth_response(self, port: int):
-        """
-        Attempt to get authentication
-        from the user's browser.
-        """
-        serv  = server.make_server(port)
-        creds = self.credentials
-
-        webbrowser.open(self.authorize_url)
-        serv.handle_request()
-
-        if serv.error:
-            raise serv.error
-
-        # Ensure the state received
-        # matches the state sent.
-        if creds.state and (serv.state != creds.state):
-            status = http.HTTPStatus(500)
-            raise errors.SpotifyStateError("",
-                reason=status.name,
-                code=status.value,
-                http_status=status.description,
-                local_state=creds.state,
-                remote_state=serv.state)
-
-        if serv.auth_code:
-            return serv.auth_code
-
-        # If failure to obtain an auth code,
-        # throw an auth error.
-        status = http.HTTPStatus(500)
-        raise errors.SpotifyOAuthError(
-            "Server listening on localhost was never accessed!",
-            reason=status.description,
-            code=status.value,
-            http_status=status.phrase)
+        return find_token_data(self, factory)["access_token"]

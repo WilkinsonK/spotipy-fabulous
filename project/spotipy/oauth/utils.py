@@ -1,5 +1,6 @@
 import base64
 import dataclasses
+import enum
 import http
 import os
 import re
@@ -94,6 +95,8 @@ def normalize_payload(payload: dict[str, typing.Any], *,
     """
     Filter out any fields in the payload
     that do not meet the condition.
+
+    default behavior is "object is truthy"
     """
 
     if not condition:
@@ -134,14 +137,20 @@ def normalize_scope(value: str):
     return " ".join(value)
 
 
-def scope_is_subset(token_data: TokenData, scope: str):
+def scope_is_subset(subset: str, scope: str):
     """
-    Determines if the `token_data`'s
-    scope is contained in the scope
+    Determines if the `subset`
+    string is contained in the scope
     `scope`.
     """
 
-    subset = set(EXPECTED_SCOPE_FORMAT.split(token_data["scope"]))
+    # If either of the given
+    # values are `None`, check
+    # to see if they both are.
+    if None in (subset, scope):
+        return subset == scope
+
+    subset = set(EXPECTED_SCOPE_FORMAT.split(subset))
     scope  = set(EXPECTED_SCOPE_FORMAT.split(scope))
 
     return subset <= scope
@@ -162,10 +171,6 @@ def token_expired(token_data: TokenData):
     return (token_data["expires_at"] - now) < 60
 
 
-def token_data_valid(token_data: TokenData):
-    return bool(token_data) and not token_expired(token_data)
-
-
 def set_expires_at(token_data: TokenData):
     """
     Sets the time the current token
@@ -174,6 +179,49 @@ def set_expires_at(token_data: TokenData):
 
     now = int(time.time())
     token_data["expires_at"] = now + token_data["expires_in"]
+
+
+class TokenState(enum.Enum):
+    VALID   = enum.auto()
+    REFRESH = enum.auto()
+    INVALID = enum.auto()
+
+
+def validate_token(token_data: TokenData, *,
+    auth_scope: str = None) -> TokenState:
+    """
+    Determines the state of a given token.
+    See the `TokenState` enum mapping for
+    available responses.
+
+    * `VALID`:   current token data is OK.
+    * `REFRESH`: current token needs renewed.
+    * `INVALID`: something wrong with the current token.
+    """
+
+    # No token is a bad token.
+    if token_data is None:
+        return TokenState.INVALID
+
+    # Can't continue comparison
+    # without a scope.
+    if "scope" not in token_data:
+        return TokenState.INVALID
+
+    scope = token_data["scope"]
+    if not auth_scope:
+        auth_scope = scope
+
+    # Ensures the scope captured
+    # in token data matches the
+    # given scope.
+    if not scope_is_subset(scope, auth_scope):
+        return TokenState.INVALID
+
+    if token_expired(token_data):
+        return TokenState.REFRESH
+
+    return TokenState.VALID
 
 
 """                            #|
@@ -260,7 +308,7 @@ def handle_http_error(error: requests.HTTPError):
     try:
         payload = resp.json()
     except ValueError:
-        error_message     = resp.txt or None
+        error_message     = resp.text or None
         error_description = None
     else:
         error_message     = payload.get("error", None)
