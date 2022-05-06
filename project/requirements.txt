@@ -1,0 +1,7 @@
+django
+redis
+requests
+pydantic
+pyyaml
+
+mypy

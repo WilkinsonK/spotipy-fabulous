@@ -1,4 +1,4 @@
-import json, os, shelve, types
+import json, os, shelve, types, typing
 
 import redis
 import django.http.request as djreq
@@ -11,9 +11,10 @@ from spotipy.oauth.cache import base
 # to `make_cache_path`. This ensures the file
 # path is never empty.
 DEFAULT_CACHE_PATH = ".cache"
+OptionalPath = typing.Optional[os.PathLike[str] | str]
 
 
-def make_cache_path(path: os.PathLike = None, *ids: str) -> str:
+def make_cache_path(path: OptionalPath, *ids: str | None) -> str:
     """
     Generate a path for some cache file.
     """
@@ -24,11 +25,11 @@ def make_cache_path(path: os.PathLike = None, *ids: str) -> str:
     # Filter out any undefined or null
     # values. Join the remaining to
     # the filepath.
-    ids = [idx for idx in ids if idx]
+    ids = tuple([idx for idx in ids if idx])
     if len(ids):
-        path = "-".join([path, *ids])
+        path = "-".join([path, *ids]) #type: ignore[list-item]
 
-    return path
+    return str(path)
 
 
 class MemoryCacheHandler(base.BaseCacheHandler):
@@ -37,7 +38,7 @@ class MemoryCacheHandler(base.BaseCacheHandler):
     simply as a dictionary.
     """
 
-    _token_data: oauth.TokenData
+    _token_data: oauth.TokenData | None #type: ignore[valid-type]
 
     def __init__(self, token_data: oauth.TokenData = None):
         self._token_data = token_data
@@ -45,7 +46,7 @@ class MemoryCacheHandler(base.BaseCacheHandler):
     def save_token_data(self, token_data: oauth.TokenData) -> None:
         self._token_data = token_data
 
-    def find_token_data(self) -> oauth.TokenData | None:
+    def find_token_data(self) -> oauth.OptionalTokenData:
         return self._token_data
 
 
@@ -65,11 +66,11 @@ class FileCacheHandler(base.BaseCacheHandler):
         with open(self._path, "w") as fd:
             fd.write(json.dumps(token_data))
 
-    def find_token_data(self) -> oauth.TokenData | None:
+    def find_token_data(self) -> oauth.OptionalTokenData:
         # Avoid catastrophie and
         # skip if no file found.
         if not os.path.exists(self._path):
-            return
+            return #type: ignore[return-value]
 
         with open(self._path, "r") as fd:
             return json.loads(fd.read())
@@ -82,7 +83,7 @@ class ShelfCacheHandler(FileCacheHandler):
     creating `shelves`.
     """
 
-    _search_key: str | None
+    _search_key: str
 
     def __init__(self, path: os.PathLike = None, *,
         user_id: str = None,
@@ -96,12 +97,12 @@ class ShelfCacheHandler(FileCacheHandler):
         with shelve.open(self._path) as db:
             db[self._search_key] = token_data
 
-    def find_token_data(self) -> oauth.TokenData | None:
+    def find_token_data(self) -> oauth.OptionalTokenData:
         if not os.path.exists(self._path):
-            return
+            return #type: ignore[return-value]
 
         with shelve.open(self._path) as db:
-            return db[self._search_key]
+            return db.get(self._search_key, None) #type: ignore[return-value]
 
 
 # Requires redis and json modules.
@@ -112,7 +113,7 @@ class RedisCacheHandler(base.BaseCacheHandler):
     """
 
     _redis:      redis.Redis
-    _search_key: str | None
+    _search_key: str
     _serializer: types.ModuleType
 
     def __init__(self, conn: redis.Redis, *, search_key: str = None):
@@ -123,8 +124,8 @@ class RedisCacheHandler(base.BaseCacheHandler):
         dump = json.dumps(token_data)
         self._redis.set(self._search_key, dump)
 
-    def find_token_data(self) -> oauth.TokenData | None:
-        dump = self._redis.get(self._search_key)
+    def find_token_data(self) -> oauth.OptionalTokenData:
+        dump = str(self._redis.get(self._search_key))
         return json.loads(dump)
 
 
@@ -146,5 +147,5 @@ class DjangoCacheHandler(base.BaseCacheHandler):
             return
         self._request.session["token_data"] = token_data
 
-    def find_token_data(self) -> oauth.TokenData | None:
+    def find_token_data(self) -> oauth.OptionalTokenData:
         return self._request.session.get("token_data", None)

@@ -60,6 +60,9 @@ TokenDataType = dict[str, typing.Any]
 TokenData     = typing.TypeVar("TokenData", bound=TokenDataType)
 """Mapping of data from access request."""
 
+OptionalTokenData = typing.Optional[TokenData]
+
+
 # Represents the expected form
 # a callable should take to qualify
 # for use in filtering.
@@ -78,9 +81,8 @@ def normalize_payload(payload: dict[str, typing.Any], *,
     default behavior is "object is truthy"
     """
 
-    if not condition:
-        condition = lambda o: bool(o)
-    return {k:v for k,v in payload.items() if condition(v)}
+    func = condition or (lambda o: bool(o))
+    return {k:v for k,v in payload.items() if func(v)}
 
 
 def handle_http_error(error: requests.HTTPError):
@@ -99,7 +101,8 @@ def handle_http_error(error: requests.HTTPError):
         error_message     = payload.get("error", None)
         error_description = payload.get("error_description", None)
 
-    raise errors.SpotifyOAuthError(error_message,
+    raise errors.SpotifyOAuthError(
+        str(error_message),
         reason=error_description or status.description,
         code=status.value,
         http_status=status.phrase)

@@ -1,6 +1,6 @@
 import typing
 
-from spotipy.oauth.cache import base
+from spotipy.oauth.cache import base, handlers
 
 
 class SpotifyCachePool:
@@ -21,7 +21,7 @@ class SpotifyCachePool:
         # Apply default cache handler
         # if none given.
         if not handler_cls:
-            handler_cls = base.MemoryCacheHandler
+            handler_cls = handlers.MemoryCacheHandler
         self._handler_cls = handler_cls
 
         # Apply default handler args
