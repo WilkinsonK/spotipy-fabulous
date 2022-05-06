@@ -16,15 +16,15 @@ class MemoryCacheHandler(base.BaseCacheHandler):
     simply as a dictionary.
     """
 
-    _token_data: base.TokenData
+    _token_data: utils.TokenData
 
-    def __init__(self, token_data: base.TokenData = None):
+    def __init__(self, token_data: utils.TokenData = None):
         self._token_data = token_data
 
-    def save_token_data(self, token_data: base.TokenData) -> None:
+    def save_token_data(self, token_data: utils.TokenData) -> None:
         self._token_data = token_data
 
-    def find_token_data(self) -> base.TokenData | None:
+    def find_token_data(self) -> utils.TokenData | None:
         return self._token_data
 
 
@@ -40,11 +40,11 @@ class FileCacheHandler(base.BaseCacheHandler):
     def __init__(self, path: os.PathLike = None, *, user_id: str = None):
         self._path = utils.make_cache_path(path, user_id)
 
-    def save_token_data(self, token_data: base.TokenData) -> None:
+    def save_token_data(self, token_data: utils.TokenData) -> None:
         with open(self._path, "w") as fd:
             fd.write(json.dumps(token_data))
 
-    def find_token_data(self) -> base.TokenData | None:
+    def find_token_data(self) -> utils.TokenData | None:
         # Avoid catastrophie and
         # skip if no file found.
         if not os.path.exists(self._path):
@@ -71,11 +71,11 @@ class ShelfCacheHandler(FileCacheHandler):
 
         self._search_key = search_key or "token_data"
 
-    def save_token_data(self, token_data: base.TokenData) -> None:
+    def save_token_data(self, token_data: utils.TokenData) -> None:
         with shelve.open(self._path) as db:
             db[self._search_key] = token_data
 
-    def find_token_data(self) -> base.TokenData | None:
+    def find_token_data(self) -> utils.TokenData | None:
         if not os.path.exists(self._path):
             return
 
@@ -98,11 +98,11 @@ class RedisCacheHandler(base.BaseCacheHandler):
         self._redis      = conn
         self._search_key = search_key or "token_data"
 
-    def save_token_data(self, token_data: base.TokenData) -> None:
+    def save_token_data(self, token_data: utils.TokenData) -> None:
         dump = json.dumps(token_data)
         self._redis.set(self._search_key, dump)
 
-    def find_token_data(self) -> base.TokenData | None:
+    def find_token_data(self) -> utils.TokenData | None:
         dump = self._redis.get(self._search_key)
         return json.loads(dump)
 
@@ -118,12 +118,12 @@ class DjangoCacheHandler(base.BaseCacheHandler):
     def __init__(self, request: djreq.HttpRequest = None):
         self._request = request
 
-    def save_token_data(self, token_data: base.TokenData) -> None:
+    def save_token_data(self, token_data: utils.TokenData) -> None:
         # Avoid catastrophie and skip
         # if no request object present.
         if not self._request:
             return
         self._request.session["token_data"] = token_data
 
-    def find_token_data(self) -> base.TokenData | None:
+    def find_token_data(self) -> utils.TokenData | None:
         return self._request.session.get("token_data", None)

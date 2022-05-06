@@ -59,6 +59,23 @@ class BaseAuthFlow(base.SpotifyBaseAuthenticator, abc.ABC):
             Retrieves an access token from the `Spotify API`
             """
 
+        def validate_token(self, token_data: utils.TokenData) -> bool:
+            """
+            Ensure the given token is valid.
+            """
+
+            if not utils.token_data_valid(token_data):
+                return False
+
+            if "scope" not in token_data:
+                return False
+
+            scope  = self.credentials.scope
+            if not utils.scope_is_subset(token_data, scope):
+                return False
+
+            return True
+
 
 def get_token_data(auth_flow: BaseAuthFlow, payload: dict[str, typing.Any]):
     """
@@ -127,7 +144,7 @@ class ClientCredentialsFlow(BaseAuthFlow):
 
             # If a valid token is found,
             # return that value.
-            if not utils.token_data_valid(token_data):
+            if not self.validate_token(token_data):
                 payload    = {"grant_type": "client_credentials"}
                 token_data = get_token_data(self, payload)
                 cursor.save_token_data(token_data)

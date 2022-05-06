@@ -105,6 +105,9 @@ def normalize_payload(payload: dict[str, typing.Any], *,
 ---- Scope Manipulation ----|
 """                        #|
 
+TokenDataType = dict[str, typing.Any]
+TokenData     = typing.TypeVar("TokenData", bound=TokenDataType)
+
 # Identify values in a string separated
 # either by a single space or a comma.
 EXPECTED_SCOPE_FORMAT = re.compile(r"\w+[, ]{1}")
@@ -131,13 +134,14 @@ def normalize_scope(value: str):
     return " ".join(value)
 
 
-def scope_is_subset(subset: str, scope: str):
+def scope_is_subset(token_data: TokenData, scope: str):
     """
-    Determines if the `subset` is
-    contained in the scope `scope`.
+    Determines if the `token_data`'s
+    scope is contained in the scope
+    `scope`.
     """
 
-    subset = set(EXPECTED_SCOPE_FORMAT.split(subset))
+    subset = set(EXPECTED_SCOPE_FORMAT.split(token_data["scope"]))
     scope  = set(EXPECTED_SCOPE_FORMAT.split(scope))
 
     return subset <= scope
@@ -148,7 +152,7 @@ def scope_is_subset(subset: str, scope: str):
 """                        #|
 
 
-def token_expired(token_data: dict[str, typing.Any]):
+def token_expired(token_data: TokenData):
     """
     Determines whether the current token
     has expired yet or not.
@@ -158,11 +162,11 @@ def token_expired(token_data: dict[str, typing.Any]):
     return (token_data["expires_at"] - now) < 60
 
 
-def token_data_valid(token_data: dict[str, typing.Any]):
-    return token_data and not token_expired(token_data)
+def token_data_valid(token_data: TokenData):
+    return bool(token_data) and not token_expired(token_data)
 
 
-def set_expires_at(token_data: dict[str, typing.Any]):
+def set_expires_at(token_data: TokenData):
     """
     Sets the time the current token
     will expire on.
