@@ -24,8 +24,9 @@ there is no object defined for it's purpose.
 import os, typing
 import urllib.parse as urlparse
 
-from spotipy.oauth import cache, utils
-from spotipy.oauth.auth import scopes, base, host, tokens
+from spotipy import oauth
+from spotipy.oauth import cache
+from spotipy.oauth.auth import scopes, base, host, sessions, tokens
 
 
 def authorize_url(base_url: str, params: dict[str, typing.Any]):
@@ -34,7 +35,7 @@ def authorize_url(base_url: str, params: dict[str, typing.Any]):
     request authorization.
     """
 
-    params = utils.normalize_payload(params)
+    params = oauth.normalize_payload(params)
     return "?".join([base_url, urlparse.urlencode(params)])
 
 
@@ -73,8 +74,8 @@ class AuthorizationFlow(base.BaseAuthFlow):
         user_id: str = None,
         redirect_url: str = None,
         proxies: dict[str, str] = None,
-        session: utils.SpotifySession = None,
-        session_factory: utils.SessionFactory = None,
+        session: sessions.SpotifySession = None,
+        session_factory: sessions.SessionFactory = None,
         timeout: float | tuple[float, ...] = None,
         cache_cls: type[cache.SpotifyCacheHandler] = None,
         cache_params: dict[str, typing.Any] = None,
@@ -133,7 +134,7 @@ class AuthorizationFlow(base.BaseAuthFlow):
         def factory(code=status_code):
             if not code:
                 code = host.get_auth_response(self)
-            return utils.normalize_payload({
+            return oauth.normalize_payload({
                 "redirect_uri": self.credentials.redirect_url,
                 "grant_type": "authorization_code",
                 "code": code,
@@ -161,8 +162,8 @@ class PKCEFlow(base.BaseAuthFlow):
     def __init__(self, client_id: str, user_id: str, *,
         redirect_url: str = None,
         proxies: dict[str, str] = None,
-        session: utils.SpotifySession = None,
-        session_factory: utils.SessionFactory = None,
+        session: sessions.SpotifySession = None,
+        session_factory: sessions.SessionFactory = None,
         timeout: float | tuple[float, ...] = None,
         cache_cls: type[cache.SpotifyCacheHandler] = None,
         cache_params: dict[str, typing.Any] = None,
@@ -226,7 +227,7 @@ class PKCEFlow(base.BaseAuthFlow):
         def factory(code=status_code):
             if not code:
                 code = host.get_auth_response(self)
-            return utils.normalize_payload({
+            return oauth.normalize_payload({
                 "redirect_uri": self.credentials.redirect_url,
                 "grant_type": "authorization_code",
                 "code": code,

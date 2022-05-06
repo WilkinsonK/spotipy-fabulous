@@ -8,11 +8,12 @@ import base64, enum, hashlib, random, secrets, time, typing
 
 import requests
 
-from spotipy.oauth import cache, utils
+from spotipy import oauth
+from spotipy.oauth import cache
 from spotipy.oauth.auth import scopes, base
 
 
-def token_expired(token_data: utils.TokenData):
+def token_expired(token_data: oauth.TokenData):
     """
     Determines whether the current token
     has expired yet or not.
@@ -22,7 +23,7 @@ def token_expired(token_data: utils.TokenData):
     return (token_data["expires_at"] - now) < 60
 
 
-def set_expires_at(token_data: utils.TokenData):
+def set_expires_at(token_data: oauth.TokenData):
     """
     Sets the time the current token
     will expire on.
@@ -38,7 +39,7 @@ class TokenState(enum.Enum):
     INVALID = enum.auto()
 
 
-def validate_token(token_data: utils.TokenData, *,
+def validate_token(token_data: oauth.TokenData, *,
     auth_scope: str = None) -> TokenState:
     """
     Determines the state of a given token.
@@ -95,7 +96,7 @@ def _get_token_data(
     try:
         resp.raise_for_status()
     except requests.HTTPError as error:
-        utils.handle_http_error(error)
+        oauth.handle_http_error(error)
     else:
         token_data = resp.json()
         set_expires_at(token_data)
@@ -172,7 +173,7 @@ def get_token_data(
 def find_token_data(
     auth_flow: base.BaseAuthFlow,
     factory: TokenPayloadFactory,
-    headers: dict[str, str] = None) -> utils.TokenData:
+    headers: dict[str, str] = None) -> oauth.TokenData:
     """
     Find valid auth token data. This function
     will first check for any cached data; in the

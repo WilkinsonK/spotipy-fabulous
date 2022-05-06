@@ -3,7 +3,7 @@ import json, os, shelve, types
 import redis
 import django.http.request as djreq
 
-from spotipy.oauth import utils
+from spotipy import oauth
 from spotipy.oauth.cache import base
 
 
@@ -37,15 +37,15 @@ class MemoryCacheHandler(base.BaseCacheHandler):
     simply as a dictionary.
     """
 
-    _token_data: utils.TokenData
+    _token_data: oauth.TokenData
 
-    def __init__(self, token_data: utils.TokenData = None):
+    def __init__(self, token_data: oauth.TokenData = None):
         self._token_data = token_data
 
-    def save_token_data(self, token_data: utils.TokenData) -> None:
+    def save_token_data(self, token_data: oauth.TokenData) -> None:
         self._token_data = token_data
 
-    def find_token_data(self) -> utils.TokenData | None:
+    def find_token_data(self) -> oauth.TokenData | None:
         return self._token_data
 
 
@@ -61,11 +61,11 @@ class FileCacheHandler(base.BaseCacheHandler):
     def __init__(self, path: os.PathLike = None, *, user_id: str = None):
         self._path = make_cache_path(path, user_id)
 
-    def save_token_data(self, token_data: utils.TokenData) -> None:
+    def save_token_data(self, token_data: oauth.TokenData) -> None:
         with open(self._path, "w") as fd:
             fd.write(json.dumps(token_data))
 
-    def find_token_data(self) -> utils.TokenData | None:
+    def find_token_data(self) -> oauth.TokenData | None:
         # Avoid catastrophie and
         # skip if no file found.
         if not os.path.exists(self._path):
@@ -92,11 +92,11 @@ class ShelfCacheHandler(FileCacheHandler):
 
         self._search_key = search_key or "token_data"
 
-    def save_token_data(self, token_data: utils.TokenData) -> None:
+    def save_token_data(self, token_data: oauth.TokenData) -> None:
         with shelve.open(self._path) as db:
             db[self._search_key] = token_data
 
-    def find_token_data(self) -> utils.TokenData | None:
+    def find_token_data(self) -> oauth.TokenData | None:
         if not os.path.exists(self._path):
             return
 
@@ -119,11 +119,11 @@ class RedisCacheHandler(base.BaseCacheHandler):
         self._redis      = conn
         self._search_key = search_key or "token_data"
 
-    def save_token_data(self, token_data: utils.TokenData) -> None:
+    def save_token_data(self, token_data: oauth.TokenData) -> None:
         dump = json.dumps(token_data)
         self._redis.set(self._search_key, dump)
 
-    def find_token_data(self) -> utils.TokenData | None:
+    def find_token_data(self) -> oauth.TokenData | None:
         dump = self._redis.get(self._search_key)
         return json.loads(dump)
 
@@ -139,12 +139,12 @@ class DjangoCacheHandler(base.BaseCacheHandler):
     def __init__(self, request: djreq.HttpRequest = None):
         self._request = request
 
-    def save_token_data(self, token_data: utils.TokenData) -> None:
+    def save_token_data(self, token_data: oauth.TokenData) -> None:
         # Avoid catastrophie and skip
         # if no request object present.
         if not self._request:
             return
         self._request.session["token_data"] = token_data
 
-    def find_token_data(self) -> utils.TokenData | None:
+    def find_token_data(self) -> oauth.TokenData | None:
         return self._request.session.get("token_data", None)

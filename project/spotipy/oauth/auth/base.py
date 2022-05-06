@@ -1,6 +1,6 @@
 import abc, dataclasses, typing
 
-from spotipy.oauth import utils, cache
+from spotipy.oauth import cache
 from spotipy.oauth.auth import sessions
 
 
@@ -41,8 +41,8 @@ class SpotifyBaseAuthenticator:
     def __init__(self,
         client_id: str,
         client_secret: str,
-        session: utils.SpotifySession, *,
-        session_factory: utils.SessionFactory = None):
+        session: sessions.SpotifySession, *,
+        session_factory: sessions.SessionFactory = None):
         """Create new Authenticator object."""
 
         self._session     = sessions.make_session(session, session_factory)
@@ -86,14 +86,14 @@ class BaseAuthFlow(SpotifyBaseAuthenticator, abc.ABC):
 
         def __init__(self, client_id: str, client_secret: str, *,
             proxies: dict[str, str] = None,
-            session: utils.SpotifySession = None,
-            session_factory: utils.SessionFactory = None,
+            session: sessions.SpotifySession = None,
+            session_factory: sessions.SessionFactory = None,
             timeout: float | tuple[float, ...] = None,
             cache_cls: type[cache.SpotifyCacheHandler] = None,
             cache_params: dict[str, typing.Any] = None):
 
             if not session:
-                session = utils.SpotifySession
+                session = sessions.SpotifySession
 
             super(BaseAuthFlow, self).__init__(
                 client_id,
