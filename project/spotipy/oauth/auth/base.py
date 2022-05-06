@@ -1,7 +1,34 @@
 import abc
+import dataclasses
 import typing
 
 from spotipy.oauth import utils, cache
+from spotipy.oauth.auth import sessions
+
+
+@dataclasses.dataclass(slots=True)
+class SpotifyCredentials:
+    client_id:       str
+    client_secret:   str
+    redirect_url:    str
+    client_username: str
+    scope:           str | None = None
+    state:           str | None = None
+    code_challenge:  str | None = None
+    code_verifier:   str | None = None
+
+
+def make_credentials(
+    client_id: str,
+    client_secret: str,
+    redirect_url: str = None,
+    username: str = None):
+    """
+    Generate a `SpotifyCredentials`
+    object.
+    """
+
+    return SpotifyCredentials(client_id, client_secret, redirect_url, username)
 
 
 class SpotifyBaseAuthenticator:
@@ -14,12 +41,14 @@ class SpotifyBaseAuthenticator:
     __oauth_authorize_url: str = "https://accounts.spotify.com/authorize"
 
     def __init__(self,
+        client_id: str,
+        client_secret: str,
         session: utils.SpotifySession, *,
         session_factory: utils.SessionFactory = None):
         """Create new Authenticator object."""
 
-        self._session     = utils.make_session(session, session_factory)
-        self._credentials = utils.make_credentials(None, None)
+        self._session     = sessions.make_session(session, session_factory)
+        self._credentials = make_credentials(client_id, client_secret)
 
     def __del__(self):
         if hasattr(self._session, "close"):
@@ -68,11 +97,11 @@ class BaseAuthFlow(SpotifyBaseAuthenticator, abc.ABC):
             if not session:
                 session = utils.SpotifySession
 
-            super(BaseAuthFlow, self).__init__(session, session_factory=session_factory)
-
-            # Set the client_id and client_secret.
-            self.credentials.client_id     = client_id
-            self.credentials.client_secret = client_secret
+            super(BaseAuthFlow, self).__init__(
+                client_id,
+                client_secret,
+                session,
+                session_factory=session_factory)
 
             # Apply additional values to the
             # internal session.

@@ -1,31 +1,11 @@
-import base64
-import dataclasses
 import http
-import os
 import re
-import types
 import typing
 
 import requests
 import requests.api
 
 from spotipy import errors
-
-
-# Used to encode, and then decode
-# the input values used to generate
-# the authentication string.
-AUTH_ENCODING: str = "ascii"
-
-
-def auth_string(client_id: str, client_secret: str):
-    """
-    Generate the string used to authenticate
-    API callouts.
-    """
-
-    auth = f"{client_id}:{client_secret}".encode(AUTH_ENCODING)
-    return f"Basic {base64.b64encode(auth).decode(AUTH_ENCODING)}"
 
 
 # The below determines any values
@@ -56,30 +36,6 @@ def normalize_string(value: str):
     return EXPECTED_ENV_PREFIX.sub("", value).lower().replace("-", "_")
 
 
-# Used in the event no initial path is passed
-# to `make_cache_path`. This ensures the file
-# path is never empty.
-DEFAULT_CACHE_PATH = ".cache"
-
-
-def make_cache_path(path: os.PathLike = None, *ids: str) -> str:
-    """
-    Generate a path for some cache file.
-    """
-
-    if not path:
-        path = DEFAULT_CACHE_PATH
-
-    # Filter out any undefined or null
-    # values. Join the remaining to
-    # the filepath.
-    ids = [idx for idx in ids if idx]
-    if len(ids):
-        path = "-".join([path, *ids])
-
-    return path
-
-
 # Represents the expected form
 # a callable should take to qualify
 # for use in filtering.
@@ -102,132 +58,13 @@ def normalize_payload(payload: dict[str, typing.Any], *,
     return {k:v for k,v in payload.items() if condition(v)}
 
 
-"""                        #|
----- Scope Manipulation ----|
-"""                        #|
-
 TokenDataType = dict[str, typing.Any]
 TokenData     = typing.TypeVar("TokenData", bound=TokenDataType)
-
-# Identify values in a string separated
-# either by a single space or a comma.
-EXPECTED_SCOPE_FORMAT = re.compile(r"\w+[, ]{1}")
-
-
-@typing.overload
-def normalize_scope(value: str):
-    ...
-
-
-@typing.overload
-def normalize_scope(value: typing.Iterable[str]):
-    ...
-
-
-def normalize_scope(value: str):
-    """
-    Transform the passed value to
-    something consumable by the `Spotify API`.
-    """
-
-    if isinstance(value, str):
-        value = EXPECTED_SCOPE_FORMAT.split(value)
-    return " ".join(value)
-
-
-def scope_is_subset(subset: str, scope: str):
-    """
-    Determines if the `subset`
-    string is contained in the scope
-    `scope`.
-    """
-
-    # If either of the given
-    # values are `None`, check
-    # to see if they both are.
-    if None in (subset, scope):
-        return subset == scope
-
-    subset = set(EXPECTED_SCOPE_FORMAT.split(subset))
-    scope  = set(EXPECTED_SCOPE_FORMAT.split(scope))
-
-    return subset <= scope
 
 
 """                            #|
 ---- Credentials Management ----|
 """                            #|
-
-
-@dataclasses.dataclass(slots=True)
-class SpotifyCredentials:
-    client_id:       str
-    client_secret:   str
-    redirect_url:    str
-    client_username: str
-    scope:           str | None = None
-    state:           str | None = None
-    code_challenge:  str | None = None
-    code_verifier:   str | None = None
-
-
-def make_credentials(
-    client_id: str,
-    client_secret: str,
-    redirect_url: str = None,
-    username: str = None):
-    """
-    Generate a `SpotifyCredentials`
-    object.
-    """
-
-    return SpotifyCredentials(client_id, client_secret, redirect_url, username)
-
-
-"""              #|
----- Sessions ----|
-"""              #|
-
-
-class SpotifySession(requests.Session):
-    pass
-
-
-class SessionFactory(typing.Protocol):
-
-    @staticmethod
-    def __call__(cls: type[SpotifySession]) -> types.ModuleType | SpotifySession:
-        ...
-
-
-def basic_session_factory(cls: type[SpotifySession]):
-    if not cls:
-        return requests.api
-    return cls()
-
-
-def make_session(
-    session: SpotifySession,
-    session_factory: SessionFactory = None):
-    """
-    Generate a `SpotifySession` object.
-
-    if `session` is `None` or a type of `Session`,
-    build new session object using the
-    `session_factory`.
-    """
-
-    if not session_factory:
-        session_factory = basic_session_factory
-
-    # We assume if no active session
-    # is passed, that it is either
-    # a `Session` type or `None`.
-    # Consequently, we then call the factory.
-    if not isinstance(session, SpotifySession):
-        session = session_factory(session)
-
-    return session
 
 
 def handle_http_error(error: requests.HTTPError):

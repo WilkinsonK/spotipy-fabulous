@@ -10,6 +10,30 @@ from spotipy.oauth import utils
 from spotipy.oauth.cache import base
 
 
+# Used in the event no initial path is passed
+# to `make_cache_path`. This ensures the file
+# path is never empty.
+DEFAULT_CACHE_PATH = ".cache"
+
+
+def make_cache_path(path: os.PathLike = None, *ids: str) -> str:
+    """
+    Generate a path for some cache file.
+    """
+
+    if not path:
+        path = DEFAULT_CACHE_PATH
+
+    # Filter out any undefined or null
+    # values. Join the remaining to
+    # the filepath.
+    ids = [idx for idx in ids if idx]
+    if len(ids):
+        path = "-".join([path, *ids])
+
+    return path
+
+
 class MemoryCacheHandler(base.BaseCacheHandler):
     """
     Stores token data in memory at runtime
@@ -38,7 +62,7 @@ class FileCacheHandler(base.BaseCacheHandler):
     _path: str
 
     def __init__(self, path: os.PathLike = None, *, user_id: str = None):
-        self._path = utils.make_cache_path(path, user_id)
+        self._path = make_cache_path(path, user_id)
 
     def save_token_data(self, token_data: utils.TokenData) -> None:
         with open(self._path, "w") as fd:

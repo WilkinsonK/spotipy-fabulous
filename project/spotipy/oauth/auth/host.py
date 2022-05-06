@@ -10,8 +10,7 @@ import urllib.parse as urlparse
 import webbrowser
 
 from spotipy import errors
-from spotipy.oauth import server
-from spotipy.oauth.auth import base
+from spotipy.oauth.auth import base, servers
 
 
 def get_host_info(result: urlparse.ParseResult):
@@ -34,7 +33,7 @@ def local_host_response(auth_flow: base.BaseAuthFlow, port: int):
     from the user's browser.
     """
 
-    serv  = server.make_server(port)
+    serv  = servers.make_server(port)
     creds = auth_flow.credentials
 
     webbrowser.open(auth_flow.authorize_url)

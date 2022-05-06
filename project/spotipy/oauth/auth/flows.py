@@ -26,7 +26,7 @@ import typing
 import urllib.parse as urlparse
 
 from spotipy.oauth import cache, utils
-from spotipy.oauth.auth import base, host, tokens
+from spotipy.oauth.auth import scopes, base, host, tokens
 
 
 def authorize_url(base_url: str, params: dict[str, typing.Any]):
@@ -109,7 +109,7 @@ class AuthorizationFlow(base.BaseAuthFlow):
         self.credentials.client_username = user_id
         self.credentials.redirect_url    = redirect_url
 
-        self.credentials.scope = utils.normalize_scope(scope or "")
+        self.credentials.scope = scopes.normalize_scope(scope or "")
         self.credentials.state = state
 
         # Attributes used for browser
@@ -197,7 +197,7 @@ class PKCEFlow(base.BaseAuthFlow):
         self.credentials.client_username = user_id
         self.credentials.redirect_url    = redirect_url
 
-        self.credentials.scope = utils.normalize_scope(scope or "")
+        self.credentials.scope = scopes.normalize_scope(scope or "")
         self.credentials.state = state
 
         verifier = tokens.make_code_verifier()

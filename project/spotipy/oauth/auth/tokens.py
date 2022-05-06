@@ -15,7 +15,7 @@ import typing
 import requests
 
 from spotipy.oauth import cache, utils
-from spotipy.oauth.auth import base
+from spotipy.oauth.auth import scopes, base
 
 
 def token_expired(token_data: utils.TokenData):
@@ -72,24 +72,13 @@ def validate_token(token_data: utils.TokenData, *,
     # Ensures the scope captured
     # in token data matches the
     # given scope.
-    if not utils.scope_is_subset(scope, auth_scope):
+    if not scopes.scope_is_subset(scope, auth_scope):
         return TokenState.INVALID
 
     if token_expired(token_data):
         return TokenState.REFRESH
 
     return TokenState.VALID
-
-
-def make_headers(auth_flow: base.BaseAuthFlow):
-    """
-    Generates a mapping of request headers.
-    """
-
-    auth = utils.auth_string(
-        auth_flow.credentials.client_id,
-        auth_flow.credentials.client_secret)
-    return {"Authorization": auth}
 
 
 def _get_token_data(
@@ -214,6 +203,17 @@ def find_token_data(
         return get_token_data(auth_flow, curs, headers, factory)
 
 
+def make_headers(auth_flow: base.BaseAuthFlow):
+    """
+    Generates a mapping of request headers.
+    """
+
+    auth = make_auth_string(
+        auth_flow.credentials.client_id,
+        auth_flow.credentials.client_secret)
+    return {"Authorization": auth}
+
+
 def make_code_verifier():
     """
     Generates a url-safe, base64 encoded, number.
@@ -238,3 +238,19 @@ def make_code_challenge(verifier: str):
     digest = hashlib.sha256(verifier.encode(CHALLENGE_ENCODING))
     raw    = base64.urlsafe_b64encode(digest.digest())
     return raw.decode(CHALLENGE_ENCODING).replace("=", "")
+
+
+# Used to encode, and then decode
+# the input values used to generate
+# the authentication string.
+AUTH_ENCODING: str = "ascii"
+
+
+def make_auth_string(client_id: str, client_secret: str):
+    """
+    Generate the string used to authenticate
+    API callouts.
+    """
+
+    auth = f"{client_id}:{client_secret}".encode(AUTH_ENCODING)
+    return f"Basic {base64.b64encode(auth).decode(AUTH_ENCODING)}"
