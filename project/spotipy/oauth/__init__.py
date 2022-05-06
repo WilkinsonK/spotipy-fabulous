@@ -1,20 +1,25 @@
-from spotipy.oauth.auth import ClientCredentialsFlow, AuthorizationFlow
+"""
+spotify/oauth
 
+In this module there are defined a series of objects
+that subclass from the `BaseAuthFlow` abstraction. See
+base.py for reference.
 
-if __name__ == "__main__":
-    client_id     = "a36aaf99dad34fe294d46d284664e5ba"
-    client_secret = "94944c3bc2534c7f9fe576ddbc6d6af9"
+These objects-- "Auth Flows"-- are designed to obtain
+access to Spotify's API by retrieving a token. The
+`Spotify API` utilizes OAuth2.0 and it's practices,
+the Auth Flows in this module represent those different
+practices.
 
-    redirect_url = "http://127.0.0.1:9090"
+Current available Auth Flows:
+* ClientCredentialsFlow
+* AuthorizationFlow
+* PKCEFlow
 
-    auth_flow = AuthorizationFlow(
-        client_id=client_id,
-        client_secret=client_secret,
-        redirect_url=redirect_url,
-        scope=["user-follow-read"])
+NOTE: Because "Implicit Grant" is not a recommened
+authentication flow, per `Spotify API` documentation,
+there is no object defined for it's purpose.
+"""
 
-    # auth_flow = ClientCredentialsFlow(
-    #     client_id=client_id,
-    #     client_secret=client_secret)
-
-    print(auth_flow.get_access_token())
+from spotipy.oauth.auth import ClientCredentialsFlow, \
+    AuthorizationFlow, PKCEFlow

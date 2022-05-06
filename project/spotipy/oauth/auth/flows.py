@@ -1,11 +1,42 @@
+"""
+auth/flows.py
+
+In this module there are defined a series of objects
+that subclass from the `BaseAuthFlow` abstraction. See
+base.py for reference.
+
+These objects-- "Auth Flows"-- are designed to obtain
+access to Spotify's API by retrieving a token. The
+`Spotify API` utilizes OAuth2.0 and it's practices,
+the Auth Flows in this module represent those different
+practices.
+
+Current available Auth Flows:
+* ClientCredentialsFlow
+* AuthorizationFlow
+* PKCEFlow
+
+NOTE: Because "Implicit Grant" is not a recommened
+authentication flow, per `Spotify API` documentation,
+there is no object defined for it's purpose.
+"""
+
 import os
-import random
-import secrets
 import typing
 import urllib.parse as urlparse
 
 from spotipy.oauth import cache, utils
 from spotipy.oauth.auth import base, host, tokens
+
+
+def authorize_url(base_url: str, params: dict[str, typing.Any]):
+    """
+    Generate the url used to
+    request authorization.
+    """
+
+    params = utils.normalize_payload(params)
+    return "?".join([base_url, urlparse.urlencode(params)])
 
 
 class ClientCredentialsFlow(base.BaseAuthFlow):
@@ -88,17 +119,15 @@ class AuthorizationFlow(base.BaseAuthFlow):
 
     @property
     def authorize_url(self):
-        payload = utils.normalize_payload({
+        payload = {
             "client_id": self.credentials.client_id,
             "redirect_uri": self.credentials.redirect_url,
             "scope": self.credentials.scope,
             "state": self.credentials.state,
             "show_dialogue": self.show_dialogue,
             "response_type": "code"
-        })
-
-        params = urlparse.urlencode(payload)
-        return "?".join([super().authorize_url, params])
+        }
+        return authorize_url(super().authorize_url, payload)
 
     def get_access_token(self, status_code: int = None) -> str:
         
@@ -110,8 +139,7 @@ class AuthorizationFlow(base.BaseAuthFlow):
                 "grant_type": "authorization_code",
                 "code": code,
                 "scope": self.credentials.scope,
-                "state": self.credentials.state
-            })
+                "state": self.credentials.state})
 
         return tokens.find_token_data(self, factory)["access_token"]
 
@@ -131,8 +159,7 @@ class PKCEFlow(base.BaseAuthFlow):
     moble/desktop applications.
     """
 
-    def __init__(self, client_id: str, *,
-        user_id: str = None,
+    def __init__(self, client_id: str, user_id: str, *,
         redirect_url: str = None,
         proxies: dict[str, str] = None,
         session: utils.SpotifySession = None,
@@ -173,6 +200,38 @@ class PKCEFlow(base.BaseAuthFlow):
         self.credentials.scope = utils.normalize_scope(scope or "")
         self.credentials.state = state
 
+        verifier = tokens.make_code_verifier()
+        self.credentials.code_verifier  = verifier
+        self.credentials.code_challenge = tokens.make_code_challenge(verifier)
+
         # Attributes used for browser
         # behavior.
         self.open_browser = open_browser
+
+    @property
+    def authorize_url(self):
+        payload = {
+            "client_id": self.credentials.client_id,
+            "redirect_uri": self.credentials.redirect_url,
+            "code_challenge": self.credentials.code_challenge,
+            "scope": self.credentials.scope,
+            "state": self.credentials.state,
+            "code_challenge_method": "S256",
+            "response_type": "code"
+        }
+        return authorize_url(super().authorize_url, payload)
+
+    def get_access_token(self, status_code: int = None) -> str:
+        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+
+        def factory(code=status_code):
+            if not code:
+                code = host.get_auth_response(self)
+            return utils.normalize_payload({
+                "redirect_uri": self.credentials.redirect_url,
+                "grant_type": "authorization_code",
+                "code": code,
+                "client_id": self.credentials.client_id,
+                "code_verifier": self.credentials.code_verifier})
+
+        return tokens.find_token_data(self, factory, headers)["access_token"]

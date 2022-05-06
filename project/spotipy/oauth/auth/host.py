@@ -1,3 +1,10 @@
+"""
+auth/host.py
+
+Host tools for retrieving an authentication
+response.
+"""
+
 import http
 import urllib.parse as urlparse
 import webbrowser
@@ -21,7 +28,7 @@ def get_host_info(result: urlparse.ParseResult):
 LOCAL_HOST_NAMES = ("127.0.0.1", "localhost")
 
 
-def local_auth_response(auth_flow: base.BaseAuthFlow, port: int):
+def local_host_response(auth_flow: base.BaseAuthFlow, port: int):
     """
     Attempt to get authentication
     from the user's browser.
@@ -75,4 +82,4 @@ def get_auth_response(auth_flow: base.BaseAuthFlow):
     # server.
     if host in LOCAL_HOST_NAMES and result.scheme == "http":
         port = port or 8080
-        return local_auth_response(auth_flow, port)
+        return local_host_response(auth_flow, port)

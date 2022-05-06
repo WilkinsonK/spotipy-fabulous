@@ -1,10 +1,8 @@
 import base64
 import dataclasses
-import enum
 import http
 import os
 import re
-import time
 import types
 import typing
 
@@ -156,74 +154,6 @@ def scope_is_subset(subset: str, scope: str):
     return subset <= scope
 
 
-"""                        #|
----- Token Manipulation ----|
-"""                        #|
-
-
-def token_expired(token_data: TokenData):
-    """
-    Determines whether the current token
-    has expired yet or not.
-    """
-
-    now = int(time.time())
-    return (token_data["expires_at"] - now) < 60
-
-
-def set_expires_at(token_data: TokenData):
-    """
-    Sets the time the current token
-    will expire on.
-    """
-
-    now = int(time.time())
-    token_data["expires_at"] = now + token_data["expires_in"]
-
-
-class TokenState(enum.Enum):
-    VALID   = enum.auto()
-    REFRESH = enum.auto()
-    INVALID = enum.auto()
-
-
-def validate_token(token_data: TokenData, *,
-    auth_scope: str = None) -> TokenState:
-    """
-    Determines the state of a given token.
-    See the `TokenState` enum mapping for
-    available responses.
-
-    * `VALID`:   current token data is OK.
-    * `REFRESH`: current token needs renewed.
-    * `INVALID`: something wrong with the current token.
-    """
-
-    # No token is a bad token.
-    if token_data is None:
-        return TokenState.INVALID
-
-    # Can't continue comparison
-    # without a scope.
-    if "scope" not in token_data:
-        return TokenState.INVALID
-
-    scope = token_data["scope"]
-    if not auth_scope:
-        auth_scope = scope
-
-    # Ensures the scope captured
-    # in token data matches the
-    # given scope.
-    if not scope_is_subset(scope, auth_scope):
-        return TokenState.INVALID
-
-    if token_expired(token_data):
-        return TokenState.REFRESH
-
-    return TokenState.VALID
-
-
 """                            #|
 ---- Credentials Management ----|
 """                            #|
@@ -237,6 +167,8 @@ class SpotifyCredentials:
     client_username: str
     scope:           str | None = None
     state:           str | None = None
+    code_challenge:  str | None = None
+    code_verifier:   str | None = None
 
 
 def make_credentials(
