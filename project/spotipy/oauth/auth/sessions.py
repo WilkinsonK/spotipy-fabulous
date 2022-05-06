@@ -27,7 +27,7 @@ def basic_session_factory(cls: type[SpotifySession]):
 
 
 def make_session(
-    session: SpotifySession,
+    session: type[SpotifySession],
     session_factory: SessionFactory = None):
     """
     Generate a `SpotifySession` object.
@@ -45,6 +45,6 @@ def make_session(
     # a `Session` type or `None`.
     # Consequently, we then call the factory.
     if not isinstance(session, SpotifySession):
-        session = session_factory(session)
+        return session_factory(session)
 
     return session

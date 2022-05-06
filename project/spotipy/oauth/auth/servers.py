@@ -83,7 +83,7 @@ def parse_url_response(handler: SpotifyRequestHandler):
 
     if "error" in form:
         status = http.HTTPStatus(500)
-        server.error = errors.SpotifyOAuthError("",
+        handler.server.error = errors.SpotifyOAuthError("",
             reason=status.description,
             code=status.value,
             http_status=status.phrase)
@@ -91,7 +91,7 @@ def parse_url_response(handler: SpotifyRequestHandler):
 
     state, code = [form.get(f) for f in EXPECTED_FORM_FIELDS]
 
-    handler.server.auth_code = code
+    handler.server.auth_code = int(code or 0)
     handler.server.state     = state
 
 

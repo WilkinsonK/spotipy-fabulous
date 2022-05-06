@@ -21,7 +21,7 @@ def normalize_scope(value: typing.Iterable[str]):
     ...
 
 
-def normalize_scope(value: str):
+def normalize_scope(value: str | typing.Iterable[str]):
     """
     Transform the passed value to
     something consumable by the `Spotify API`.
@@ -32,7 +32,7 @@ def normalize_scope(value: str):
     return " ".join(value)
 
 
-def scope_is_subset(subset: str, scope: str):
+def scope_is_subset(subset: str | None, scope: str | None):
     """
     Determines if the `subset`
     string is contained in the scope
@@ -45,7 +45,7 @@ def scope_is_subset(subset: str, scope: str):
     if None in (subset, scope):
         return subset == scope
 
-    subset = set(EXPECTED_SCOPE_FORMAT.split(subset))
-    scope  = set(EXPECTED_SCOPE_FORMAT.split(scope))
+    subset = set(EXPECTED_SCOPE_FORMAT.split(subset)) #type: ignore[assignment, arg-type]
+    scope  = set(EXPECTED_SCOPE_FORMAT.split(scope)) #type: ignore[assignment, arg-type]
 
-    return subset <= scope
+    return subset <= scope #type: ignore[operator]

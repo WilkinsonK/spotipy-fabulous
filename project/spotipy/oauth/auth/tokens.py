@@ -39,7 +39,7 @@ class TokenState(enum.Enum):
     INVALID = enum.auto()
 
 
-def validate_token(token_data: oauth.TokenData, *,
+def validate_token(token_data: oauth.OptionalTokenData, *,
     auth_scope: str = None) -> TokenState:
     """
     Determines the state of a given token.
@@ -151,7 +151,7 @@ def get_token_data(
 
     if token_state is TokenState.REFRESH:
         payload = {
-            "refresh_token": token_data["refresh_token"],
+            "refresh_token": token_data["refresh_token"], #type: ignore[index]
             "grant_type": "refresh_token"
         }
     else:
@@ -195,7 +195,7 @@ def find_token_data(
 
     with cache.SpotifyCachePool(hcls, hkwds=hkwds) as cpool:
         curs = cpool.new()
-        return get_token_data(auth_flow, curs, headers, factory)
+        return get_token_data(auth_flow, curs, headers, factory) #type: ignore[arg-type]
 
 
 def make_headers(auth_flow: base.BaseAuthFlow):

@@ -57,7 +57,7 @@ class ClientCredentialsFlow(base.BaseAuthFlow):
         def factory():
             return {"grant_type": "client_credentials"}
 
-        return tokens.find_token_data(self, factory)["access_token"]
+        return tokens.find_token_data(self, factory)["access_token"] #type: ignore[index]
 
 
 class AuthorizationFlow(base.BaseAuthFlow):
@@ -74,14 +74,14 @@ class AuthorizationFlow(base.BaseAuthFlow):
         user_id: str = None,
         redirect_url: str = None,
         proxies: dict[str, str] = None,
-        session: sessions.SpotifySession = None,
+        session: type[sessions.SpotifySession] = None,
         session_factory: sessions.SessionFactory = None,
-        timeout: float | tuple[float, ...] = None,
+        timeout: float | tuple[float, ...] | None = None,
         cache_cls: type[cache.SpotifyCacheHandler] = None,
         cache_params: dict[str, typing.Any] = None,
         cache_path: os.PathLike = None,
         state: str = None,
-        scope: str | typing.Iterable[str] = None,
+        scope: str | typing.Iterable[str] | None = None,
         show_dialogue: bool = False,
         open_browser: bool = True):
 
@@ -141,7 +141,7 @@ class AuthorizationFlow(base.BaseAuthFlow):
                 "scope": self.credentials.scope,
                 "state": self.credentials.state})
 
-        return tokens.find_token_data(self, factory)["access_token"]
+        return tokens.find_token_data(self, factory)["access_token"] #type: ignore[index]
 
 
 class PKCEFlow(base.BaseAuthFlow):
@@ -162,14 +162,14 @@ class PKCEFlow(base.BaseAuthFlow):
     def __init__(self, client_id: str, user_id: str, *,
         redirect_url: str = None,
         proxies: dict[str, str] = None,
-        session: sessions.SpotifySession = None,
+        session: type[sessions.SpotifySession] = None,
         session_factory: sessions.SessionFactory = None,
-        timeout: float | tuple[float, ...] = None,
+        timeout: float | tuple[float, ...] | None = None,
         cache_cls: type[cache.SpotifyCacheHandler] = None,
         cache_params: dict[str, typing.Any] = None,
         cache_path: os.PathLike = None,
         state: str = None,
-        scope: str | typing.Iterable[str] = None,
+        scope: str | typing.Iterable[str] | None = None,
         open_browser: bool = True):
 
         if not cache_params:
@@ -234,4 +234,4 @@ class PKCEFlow(base.BaseAuthFlow):
                 "client_id": self.credentials.client_id,
                 "code_verifier": self.credentials.code_verifier})
 
-        return tokens.find_token_data(self, factory, headers)["access_token"]
+        return tokens.find_token_data(self, factory, headers)["access_token"] #type: ignore[index]

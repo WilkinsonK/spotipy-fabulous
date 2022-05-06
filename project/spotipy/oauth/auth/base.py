@@ -8,8 +8,8 @@ from spotipy.oauth.auth import sessions
 class SpotifyCredentials:
     client_id:       str
     client_secret:   str
-    redirect_url:    str
-    client_username: str
+    redirect_url:    str | None
+    client_username: str | None
     scope:           str | None = None
     state:           str | None = None
     code_challenge:  str | None = None
@@ -41,7 +41,7 @@ class SpotifyBaseAuthenticator:
     def __init__(self,
         client_id: str,
         client_secret: str,
-        session: sessions.SpotifySession, *,
+        session: type[sessions.SpotifySession], *,
         session_factory: sessions.SessionFactory = None):
         """Create new Authenticator object."""
 
@@ -86,9 +86,9 @@ class BaseAuthFlow(SpotifyBaseAuthenticator, abc.ABC):
 
         def __init__(self, client_id: str, client_secret: str, *,
             proxies: dict[str, str] = None,
-            session: sessions.SpotifySession = None,
+            session: type[sessions.SpotifySession] = None,
             session_factory: sessions.SessionFactory = None,
-            timeout: float | tuple[float, ...] = None,
+            timeout: float | tuple[float, ...] | None = None,
             cache_cls: type[cache.SpotifyCacheHandler] = None,
             cache_params: dict[str, typing.Any] = None):
 
