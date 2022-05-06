@@ -5,9 +5,8 @@ Host tools for retrieving an authentication
 response.
 """
 
-import http
+import http, webbrowser
 import urllib.parse as urlparse
-import webbrowser
 
 from spotipy import errors
 from spotipy.oauth.auth import base, servers

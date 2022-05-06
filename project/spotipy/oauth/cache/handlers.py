@@ -1,7 +1,4 @@
-import json
-import os
-import shelve
-import types
+import json, os, shelve, types
 
 import redis
 import django.http.request as djreq

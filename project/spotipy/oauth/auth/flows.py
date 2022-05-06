@@ -21,8 +21,7 @@ authentication flow, per `Spotify API` documentation,
 there is no object defined for it's purpose.
 """
 
-import os
-import typing
+import os, typing
 import urllib.parse as urlparse
 
 from spotipy.oauth import cache, utils

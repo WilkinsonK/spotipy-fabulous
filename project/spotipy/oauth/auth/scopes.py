@@ -4,8 +4,7 @@ auth/scopes.py
 Tools for manipulating access scope.
 """
 
-import re
-import typing
+import re, typing
 
 # Identify values in a string separated
 # either by a single space or a comma.

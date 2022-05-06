@@ -4,13 +4,7 @@ auth/tokens.py
 Token tools for manipulating token data.
 """
 
-import base64
-import enum
-import hashlib
-import random
-import secrets
-import time
-import typing
+import base64, enum, hashlib, random, secrets, time, typing
 
 import requests
 

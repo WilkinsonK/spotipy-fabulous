@@ -1,6 +1,4 @@
-import abc
-import dataclasses
-import typing
+import abc, dataclasses, typing
 
 from spotipy.oauth import utils, cache
 from spotipy.oauth.auth import sessions

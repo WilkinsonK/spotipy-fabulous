@@ -1,7 +1,12 @@
-import http
+"""
+auth/servers.py
+
+Used for creating local server instance.
+"""
+
+
+import http, pathlib, typing
 import http.server as server
-import pathlib
-import typing
 import urllib.parse as parse
 
 from spotipy import errors
@@ -10,7 +15,7 @@ from spotipy import errors
 # Templates used for generating responses
 # from the local server are stored in this
 # path.
-TEMPLATE_ROOT = pathlib.Path(__file__).parent / "templates"
+TEMPLATE_ROOT = pathlib.Path(__file__).parent[1] / "templates"
 
 # Identify the appropriate usecase for
 # each template.

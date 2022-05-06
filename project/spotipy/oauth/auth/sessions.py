@@ -4,8 +4,7 @@ auth/sessions.py
 Tools for building sessions.
 """
 
-import types
-import typing
+import types, typing
 
 import requests
 

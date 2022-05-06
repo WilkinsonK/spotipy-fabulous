@@ -1,5 +1,4 @@
-import abc
-import typing
+import abc, typing
 
 from spotipy.oauth import utils
 
