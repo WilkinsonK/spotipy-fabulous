@@ -13,4 +13,8 @@ if __name__ == "__main__":
         redirect_url=redirect_url,
         scope=["user-follow-read"])
 
+    # auth_flow = ClientCredentialsFlow(
+    #     client_id=client_id,
+    #     client_secret=client_secret)
+
     print(auth_flow.get_access_token())
