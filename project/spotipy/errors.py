@@ -13,14 +13,14 @@ class HttpExceptionValues(ExceptionValues):
     code:        int
 
     # Optionals
-    reason:  str            = field(default=None)
+    reason:  str | None     = field(default=None)
     headers: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class StateExceptionValues(HttpExceptionValues):
-    local_state:  str = field(default=None)
-    remote_state: str = field(default=None)
+    local_state:  str | None = field(default=None)
+    remote_state: str | None = field(default=None)
 
 
 class SpotifyException(Exception):
@@ -76,3 +76,17 @@ class SpotifyStateError(SpotifyHttpError):
         SpotifyHttpError.template +
         "\n\texpected {local_state} but recieved {remote_state}")
     values_cls = StateExceptionValues
+
+
+class SpotifyModelError(SpotifyException):
+    """
+    Raised when there is a model related
+    error.
+    """
+
+
+class SpotifyValidationError(SpotifyModelError):
+    """
+    Raised when validation fails on
+    some model.
+    """
