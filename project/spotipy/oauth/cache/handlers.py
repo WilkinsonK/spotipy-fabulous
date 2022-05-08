@@ -25,7 +25,7 @@ def make_cache_path(path: OptionalPath, *ids: str | None) -> str:
     # Filter out any undefined or null
     # values. Join the remaining to
     # the filepath.
-    ids = tuple([idx for idx in ids if idx])
+    ids = tuple([i for i in ids if i])
     if len(ids):
         path = "-".join([path, *ids]) #type: ignore[list-item]
 
