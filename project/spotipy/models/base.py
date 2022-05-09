@@ -478,17 +478,24 @@ def digest(payload: SpotifyPayloadType, *,
     return model.digest(_status, payload) #type: ignore[return-value]
 
 
+EXPANSION_FIELDS_TO_EXCLUDE = {"http_status"}
+"""
+Fields that are to be ignored on model expansion.
+"""
+
+
 def expand(model: SpotifyModel) -> SpotifyPayloadDigest:
     """
     Restore a model to represent a
     payload.
     """
 
+    payload = model.dict(
+        exclude=EXPANSION_FIELDS_TO_EXCLUDE,
+        exclude_none=True)
+
     # If passing in an error,
     # return `error` attribute.
     if isinstance(model, SpotifyErrorModel):
-        return model.dict()["error"]
-
-    payload = model.dict()
-    payload.pop("http_status")
+        return payload["error"]
     return payload
