@@ -1,5 +1,80 @@
 """
 models/base.py
+
+Models based off from `pydantic`. Here you will find
+the generics, bases and the types to be associated
+with `Spotify Objects`. Deriving all from the same
+base class, `SpotifyBaseModel`, all other subsequent
+bases and generics are designed for the following
+purposes.
+
+```python
+fromp spotipy import models
+
+class SomeModel(models.SpotifyBaseModel):
+
+    @classmethod
+    def digest(cls, status, payload):
+        '''Some code to make object from payload.'''
+
+# returns an instance of `SomeModel`
+obj = models.digest({}, model=SomeModel)
+
+print(obj) # Model instance.
+print(models.expand(obj)) # Model restored to payload.
+```
+
+**Functions**:
+
+- `digest`: Collapses an inbound payload into the
+target model.
+
+- `expand`: Restore a model to represent a payload.
+
+
+**Models**:
+
+- `SpotifyBaseModel`: The base abstraction all models
+are derived from.
+
+    :alias: SpotifyModel
+
+    :usage: SpotifyBaseModel
+
+- `SpotifyBaseItem`: Represents a single object.
+
+    :alias: SpotifyItem
+
+    :param: <KT>
+
+    :usage: SpotifyBaseItem[<KT>]
+
+- `SpotifyBaseTyped`: Represents an object which has
+an identity.
+
+    :alias: SpotifyTyped
+
+    :param: <SpotifyModel>
+
+    :usage: SpotifyBaseTyped[<SpotifyModel>]
+
+- `SpotifyBaseIterable`: Represents a series of
+items in sequence.
+
+    :alias: SpotifyIterable
+
+    :param: <SpotifyModel>
+
+    :usage: SpotifyBaseIterable[<SpotifyModel>]
+
+- `SpotifyBaseCollection`: Represents a series of
+typed items in sequence.
+
+    :alias: SpotifyCollection
+
+    :param: <SpotifyModel>
+
+    :usage: SpotifyBaseCollectio[<SpotifyModel>]
 """
 
 import abc, http, itertools, re, typing
@@ -356,16 +431,6 @@ class SpotifyErrorModel(SpotifyBaseModel):
     error: SpotifyPayload
     """
     Inbound error payload.
-    Parsed from:
-
-    ```json
-    {
-        "error": {
-            "status": 400,
-            "message": "string"
-        }
-    }
-    ```
     """
 
     @classmethod
