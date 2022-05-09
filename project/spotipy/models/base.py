@@ -4,6 +4,7 @@ models/base.py
 
 import abc
 import http
+import itertools
 import re
 import typing
 
@@ -73,6 +74,30 @@ Represents an inbound dataset
 from the `Spotify API`.
 """
 
+SpotifyTyped = typing.TypeVar("SpotifyTyped", bound="SpotifyBaseTyped")
+"""
+Represents a specific kind of object
+coming from the `Spotify API`.
+
+This object can be considered a
+"thing" which has an identity, and
+a collection of refrerences to it's
+relationships.
+"""
+
+SpotifyIterable = typing.TypeVar("SpotifyIterable", bound="SpotifyBaseIterable")
+"""
+Represents a series of items in
+sequence.
+"""
+
+SpotifyCollection = typing.TypeVar(
+    "SpotifyCollection", bound="SpotifyBaseCollection")
+"""
+Represents a series of items in
+sequence.
+"""
+
 SpotifyPayloadType   = dict[KT, VT]
 SpotifyPayloadDigest = dict[str, typing.Any] # Because  Liskov Principle...
 
@@ -83,13 +108,13 @@ class SpotifyBaseModel(abc.ABC, BaseModel, typing.Generic[UnsignedInt]):
     the form of an object.
     """
 
-    http_status: http.HTTPStatus | UnsignedInt
+    http_status: http.HTTPStatus
     """
     Response code from `payload` retrieval.
     """
 
-    @abc.abstractmethod
     @classmethod
+    @abc.abstractmethod
     def digest(cls,
         status: UnsignedInt, payload: SpotifyPayload) -> "SpotifyBaseModel":
         """
@@ -99,7 +124,7 @@ class SpotifyBaseModel(abc.ABC, BaseModel, typing.Generic[UnsignedInt]):
 
     @validator("http_status")
     def validate_status_code(cls, value):
-        if isinstance(value, UnsignedInt):
+        if isinstance(value, int):
             value = http.HTTPStatus(value)
         return value
 
@@ -114,11 +139,15 @@ def basic_make_model(cls: type[SpotifyModel],
 
 
 class SpotifyBaseTyped(
-    SpotifyBaseModel, typing.Generic[UrlPath, SpotifyModel]):
+    SpotifyBaseModel, typing.Generic[SpotifyModel, UrlPath]):
     """
-    Represents a specific kind of
-    object coming from the
-    `Spotify API`.
+    Represents a specific kind of object
+    coming from the `Spotify API`.
+
+    This object can be considered a
+    "thing" which has an identity, and
+    a collection of refrerences to it's
+    relationships.
     """
 
     id: str
@@ -141,7 +170,7 @@ class SpotifyBaseTyped(
     A link to the `Web API` endpoint for this object.
     """
 
-    external_urls: list[UrlPath]
+    external_urls: typing.Iterable[UrlPath]
     """
     Known external `URLS` for this object.
     """
@@ -151,7 +180,7 @@ class SpotifyBaseTyped(
     The `Spotify URI` for this object.
     """
 
-    images: list[SpotifyModel]
+    images: typing.Iterable[SpotifyModel]
     """
     Images related to this object.
     """
@@ -166,8 +195,47 @@ class SpotifyBaseTyped(
             return UrlPathType(value)
 
 
-class SpotifyBaseCollection(
-    SpotifyBaseModel, typing.Generic[SpotifyModel, UnsignedInt, UrlPath]):
+class SpotifyBaseIterable(
+    SpotifyBaseModel, typing.Generic[SpotifyModel, UnsignedInt]):
+    """
+    Represents a series of items in
+    sequence.
+    """
+
+    items: typing.Iterable[SpotifyModel]
+    total: UnsignedInt
+
+    def __iter__(self):
+        return iter(self.items)
+
+    @classmethod
+    def digest(cls, status: UnsignedInt, payload: typing.Iterable):
+        model_cls         = cls.get_model_cls()
+        items, properties = [], model_cls.schema()["properties"]
+
+        for item in payload:
+            if isinstance(item, str):
+                item = status, item
+            else:
+                item = (status, *item)
+            item = dict(itertools.zip_longest(properties, item))
+            item.pop("http_status")
+
+            items.append(model_cls.digest(status, item))
+
+        return cls(http_status=status, items=items, total=len(items))
+
+    @classmethod
+    def get_model_cls(cls) -> type[SpotifyModel]:
+        """
+        Retrieve the model class attributed
+        to this Iterable.
+        """
+        return cls.__orig_bases__[0].__args__[0] #type: ignore[attr-defined]
+
+
+class SpotifyBaseCollection(SpotifyBaseModel,
+    typing.Generic[SpotifyModel, UnsignedInt, UrlPath]):
     """
     Represents a series of items in
     sequence.
@@ -284,10 +352,10 @@ def digest(payload: SpotifyPayload, *,
     if model is None:
         raise errors.SpotifyValidationError("param 'model' must not be None.")
 
-    return model(http_status=_status, **payload)
+    return model.digest(_status, payload) #type: ignore[return-value]
 
 
-def expand(model: SpotifyModel) -> SpotifyPayload:
+def expand(model: SpotifyModel) -> SpotifyPayloadDigest:
     """
     Restore a model to represent a
     payload.
@@ -300,4 +368,4 @@ def expand(model: SpotifyModel) -> SpotifyPayload:
 
     payload = model.dict()
     payload.pop("http_status")
-    return payload #type: ignore[return-value]
+    return payload

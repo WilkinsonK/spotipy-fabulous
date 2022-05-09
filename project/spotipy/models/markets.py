@@ -1,34 +1,36 @@
 import typing
 
-from pydantic import validator
+from pydantic import BaseModel, validator
 
 from spotipy.models import base
 
 
-MarketCode = typing.TypeVar("MarketCode", bound="MarketCodeType")
-"""
-A two char string representing
-a country code.
-"""
+class MarketCode(base.SpotifyBaseModel):
+    """
+    A two char string representing
+    a country code.
+    """
 
-Markets = typing.TypeVar("Markets", bound="MarketsType")
-"""
-Array of `MarketCode` objects.
-"""
+    value: str
 
-MarketCodeType = str
-MarketsType = list[MarketCode]
+    def __str__(self):
+        return self.value
+
+    @classmethod
+    def digest(cls, status: base.UnsignedInt, payload: base.SpotifyPayload):
+        return base.basic_make_model(cls, status, payload)
+
+    @validator("value")
+    def validate_code(cls, value):
+        if len(value) != 2:
+            raise ValueError(f"expected 2 chars for value, got {value}!")
+        return value
 
 
-class AvailableMarkets(base.SpotifyBaseModel, typing.Generic[Markets]):
+class AvailableMarkets(base.SpotifyBaseIterable[MarketCode, base.UnsignedInt]):
     """
     List of available markets where
     `Spotify` is available.
 
     :endpoint: /markets
-    """
-
-    markets: Markets
-    """
-    Array of `MarketCode` objects.
     """
