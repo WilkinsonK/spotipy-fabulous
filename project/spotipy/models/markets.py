@@ -17,7 +17,9 @@ class MarketCode(base.SpotifyBaseModel):
         return self.value
 
     @classmethod
-    def digest(cls, status: base.UnsignedInt, payload: base.SpotifyPayload):
+    def digest(cls,
+        status: base.UnsignedIntType, payload: base.SpotifyPayloadType):
+
         return base.basic_make_model(cls, status, payload)
 
     @validator("value")
@@ -27,7 +29,7 @@ class MarketCode(base.SpotifyBaseModel):
         return value
 
 
-class AvailableMarkets(base.SpotifyBaseIterable[MarketCode, base.UnsignedInt]):
+class AvailableMarkets(base.SpotifyBaseIterable[MarketCode]):
     """
     List of available markets where
     `Spotify` is available.

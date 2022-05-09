@@ -13,11 +13,13 @@ class Genre(base.SpotifyBaseModel):
         return self.value
 
     @classmethod
-    def digest(cls, status: base.UnsignedInt, payload: base.SpotifyPayload):
+    def digest(cls,
+        status: base.UnsignedIntType, payload: base.SpotifyPayloadType):
+
         return base.basic_make_model(cls, status, payload)
 
 
-class AvailableGenres(base.SpotifyBaseIterable[Genre, base.UnsignedInt]):
+class AvailableGenres(base.SpotifyBaseIterable[Genre]):
     """
     List of available genres seed
     parameter values for

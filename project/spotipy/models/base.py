@@ -16,12 +16,13 @@ import spotipy.errors as errors
 KT = typing.TypeVar("KT")
 VT = typing.TypeVar("VT")
 
-UnsignedInt = typing.TypeVar("UnsignedInt", bound="UnsignedIntType")
+UnsignedIntType = typing.TypeVar(
+    "UnsignedIntType", bound="UnsignedInt", contravariant=True)
 """
 A positive valued, non-floating, number.
 """
 
-class UnsignedIntType(int):
+class UnsignedInt(int):
     """
     A positive valued, non-floating, number.
     """
@@ -33,7 +34,7 @@ class UnsignedIntType(int):
             raise ValueError(
                 f"UnsignedInt can only accept "
                 f"positive integers, not {value!s}!")
-        return super(UnsignedIntType, cls).__new__(cls, value)
+        return super(UnsignedInt, cls).__new__(cls, value)
 
 
 class SupportsString(typing.Protocol):
@@ -47,22 +48,25 @@ class SupportsString(typing.Protocol):
         ...
 
 
-UrlRegex = re.compile(r"(?:[a-zA-Z]://)?(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
-UrlPath  = typing.TypeVar("UrlPath", bound="UrlPathType")
+UrlRegex = re.compile(
+    r"(?:[a-zA-Z]://)?"
+    r"(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
+UrlPathType = typing.TypeVar(
+    "UrlPathType", bound="UrlPath", contravariant=True)
 """
 A string which represents a `URL`.
 This includes, protocol, host and
 endpoint (optional).
 """
 
-class UrlPathType(str):
+class UrlPath(str):
 
     def __new__(cls, value: SupportsString):
         if not UrlRegex.fullmatch(str(value)):
             raise ValueError(
                 f"expected a valid url. "
                 f"{value!r} is not url safe!")
-        return super(UrlPathType, cls).__new__(cls, value)
+        return super(UrlPath, cls).__new__(cls, value)
 
 
 SpotifyModel = typing.TypeVar("SpotifyModel", bound="SpotifyBaseModel")
@@ -71,7 +75,8 @@ Represents a inbound payload in
 the form of an object.
 """
 
-SpotifyPayload = typing.TypeVar("SpotifyPayload", bound="SpotifyPayloadType")
+SpotifyPayloadType = typing.TypeVar(
+    "SpotifyPayloadType", bound="SpotifyPayload", contravariant=True)
 """
 Represents an inbound dataset
 from the `Spotify API`.
@@ -101,17 +106,17 @@ Represents a series of items in
 sequence.
 """
 
-SpotifyPayloadType   = dict[KT, VT]
+SpotifyPayload       = dict[KT, VT] | typing.Iterable
 SpotifyPayloadDigest = dict[str, typing.Any] # Because  Liskov Principle...
 
 
-class SpotifyBaseModel(abc.ABC, BaseModel, typing.Generic[UnsignedInt]):
+class SpotifyBaseModel(abc.ABC, BaseModel):
     """
     Represents a inbound payload in
     the form of an object.
     """
 
-    http_status: http.HTTPStatus
+    http_status: http.HTTPStatus | UnsignedInt
     """
     Response code from `payload` retrieval.
     """
@@ -119,7 +124,8 @@ class SpotifyBaseModel(abc.ABC, BaseModel, typing.Generic[UnsignedInt]):
     @classmethod
     @abc.abstractmethod
     def digest(cls,
-        status: UnsignedInt, payload: SpotifyPayload) -> "SpotifyBaseModel":
+        status: UnsignedIntType,
+        payload: SpotifyPayloadType) -> "SpotifyBaseModel":
         """
         Breaks the given payload into
         an instance of this `SpotifyModel`.
@@ -132,17 +138,37 @@ class SpotifyBaseModel(abc.ABC, BaseModel, typing.Generic[UnsignedInt]):
         return value
 
 
+def hash_from_schema(cls: type[SpotifyModel],
+    status: UnsignedIntType, data: typing.Iterable):
+    """
+    Breaks down some iterable into
+    a hash based on the given
+    `SpotifyModel` schema.
+    """
+
+    properties = cls.schema()["properties"]
+
+    if isinstance(data, str):
+        data = status, data
+    else:
+        data = (status, *data)
+
+    return dict(itertools.zip_longest(properties, data))
+
+
 def basic_make_model(cls: type[SpotifyModel],
-    status: UnsignedInt, payload: SpotifyPayloadDigest):
+    status: UnsignedInt, payload: SpotifyPayloadType):
     """
     Standard expected model digestion.
     """
 
+    if not isinstance(payload, dict):
+        payload = hash_from_schema(cls, status, payload)
+
     return cls(http_status=status, **payload)
 
 
-class SpotifyBaseTyped(
-    SpotifyBaseModel, typing.Generic[SpotifyModel, UrlPath]):
+class SpotifyBaseTyped(SpotifyBaseModel, typing.Generic[SpotifyModel]):
     """
     Represents a specific kind of object
     coming from the `Spotify API`.
@@ -198,8 +224,7 @@ class SpotifyBaseTyped(
             return UrlPathType(value)
 
 
-class SpotifyBaseIterable(
-    SpotifyBaseModel, typing.Generic[SpotifyModel, UnsignedInt]):
+class SpotifyBaseIterable(SpotifyBaseModel, typing.Generic[SpotifyModel]):
     """
     Represents a series of items in
     sequence.
@@ -212,18 +237,13 @@ class SpotifyBaseIterable(
         return iter(self.items)
 
     @classmethod
-    def digest(cls, status: UnsignedInt, payload: typing.Iterable):
-        model_cls         = cls.get_model_cls()
-        items, properties = [], model_cls.schema()["properties"]
+    def digest(cls, status: UnsignedIntType, payload: typing.Iterable):
+        model_cls = cls.get_model_cls()
+        items     = []
 
         for item in payload:
-            if isinstance(item, str):
-                item = status, item
-            else:
-                item = (status, *item)
-            item = dict(itertools.zip_longest(properties, item))
+            item = hash_from_schema(cls, status, item)
             item.pop("http_status")
-
             items.append(model_cls.digest(status, item))
 
         return cls(http_status=status, items=items, total=len(items))
@@ -237,8 +257,7 @@ class SpotifyBaseIterable(
         return cls.__orig_bases__[0].__args__[0] #type: ignore[attr-defined]
 
 
-class SpotifyBaseCollection(SpotifyBaseModel,
-    typing.Generic[SpotifyModel, UnsignedInt, UrlPath]):
+class SpotifyBaseCollection(SpotifyBaseModel, typing.Generic[SpotifyModel]):
     """
     Represents a series of items in
     sequence.
@@ -286,7 +305,10 @@ class SpotifyBaseCollection(SpotifyBaseModel,
     """
 
     @classmethod
-    def digest(cls, status: UnsignedInt, payload: SpotifyPayload):
+    def digest(cls, status: UnsignedIntType, payload: SpotifyPayloadType):
+        if not isinstance(payload, dict):
+            payload = hash_from_schema(cls, status, payload)
+
         items = {}
         for key, coll in payload.items():
             items[key] = basic_make_model(cls, status, coll)
@@ -294,7 +316,7 @@ class SpotifyBaseCollection(SpotifyBaseModel,
 
     @validator("limit", "offset")
     def validate_limits(cls, value):
-        return UnsignedIntType(value)
+        return UnsignedInt(value)
 
     @validator("href", "next", "previous")
     def validate_urls(cls, value):
@@ -302,7 +324,7 @@ class SpotifyBaseCollection(SpotifyBaseModel,
             return UrlPathType(value)
 
 
-class SpotifyErrorModel(SpotifyBaseModel, typing.Generic[SpotifyPayload]):
+class SpotifyErrorModel(SpotifyBaseModel):
     """
     Represents the structure of an
     error response from the
@@ -325,11 +347,11 @@ class SpotifyErrorModel(SpotifyBaseModel, typing.Generic[SpotifyPayload]):
     """
 
     @classmethod
-    def digest(cls, status: UnsignedInt, payload: SpotifyPayloadDigest):
+    def digest(cls, status: UnsignedIntType, payload: SpotifyPayloadType):
         return cls(http_status=status, error=payload)
 
 
-def digest(payload: SpotifyPayload, *,
+def digest(payload: SpotifyPayloadDigest, *,
     status: UnsignedInt = None,
     model: type[SpotifyModel] = None) -> SpotifyModel:
     """
@@ -342,12 +364,12 @@ def digest(payload: SpotifyPayload, *,
     """
 
     if "error" in payload:
-        _status = UnsignedIntType(payload["error"]["status"])
+        _status = UnsignedInt(payload["error"]["status"])
         return SpotifyErrorModel.digest(_status, payload)
 
     # Assume response status is
     # `CREATED` if none given.
-    _status = status or UnsignedIntType(201)
+    _status = status or UnsignedInt(201)
 
     # model param is still a
     # required value.
