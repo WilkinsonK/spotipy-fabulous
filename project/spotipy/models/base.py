@@ -104,6 +104,15 @@ class SpotifyBaseModel(abc.ABC, BaseModel, typing.Generic[UnsignedInt]):
         return value
 
 
+def basic_make_model(cls: type[SpotifyModel],
+    status: UnsignedInt, payload: SpotifyPayloadDigest):
+    """
+    Standard expected model digestion.
+    """
+
+    return cls(http_status=status, **payload)
+
+
 class SpotifyBaseTyped(
     SpotifyBaseModel, typing.Generic[UrlPath, SpotifyModel]):
     """
@@ -146,6 +155,10 @@ class SpotifyBaseTyped(
     """
     Images related to this object.
     """
+
+    @classmethod
+    def digest(cls, status: UnsignedInt, payload: SpotifyPayload):
+        return basic_make_model(cls, status, payload)
 
     @validator("href", "external_urls")
     def validate_urls(cls, value):
@@ -202,10 +215,10 @@ class SpotifyBaseCollection(
     """
 
     @classmethod
-    def digest(cls, status: UnsignedInt, payload: SpotifyPayloadDigest):
+    def digest(cls, status: UnsignedInt, payload: SpotifyPayload):
         items = {}
         for key, coll in payload.items():
-            items[key] = cls(http_status=status, **coll)
+            items[key] = basic_make_model(cls, status, coll)
         return cls(http_status=status, **payload)
 
     @validator("limit", "offset")
