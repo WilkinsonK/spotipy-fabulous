@@ -22,6 +22,9 @@ A positive valued, non-floating, number.
 """
 
 class UnsignedIntType(int):
+    """
+    A positive valued, non-floating, number.
+    """
 
     def __new__(cls, value: int | str | bytes | None = None):
         value = int(value or 0)
