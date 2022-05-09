@@ -5,22 +5,11 @@ from pydantic import validator
 from spotipy.models import base
 
 
-class MarketCode(base.SpotifyBaseModel):
+class MarketCode(base.SpotifyBaseItem[str]):
     """
     A two char string representing
     a country code.
     """
-
-    value: str
-
-    def __str__(self):
-        return self.value
-
-    @classmethod
-    def digest(cls,
-        status: base.UnsignedIntType, payload: base.SpotifyPayloadType):
-
-        return base.basic_make_model(cls, status, payload)
 
     @validator("value")
     def validate_code(cls, value):

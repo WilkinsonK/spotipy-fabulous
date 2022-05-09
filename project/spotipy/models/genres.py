@@ -1,22 +1,11 @@
 from spotipy.models import base
 
 
-class Genre(base.SpotifyBaseModel):
+class Genre(base.SpotifyBaseItem[str]):
     """
     String representing some
     genre.
     """
-
-    value: str
-
-    def __str__(self):
-        return self.value
-
-    @classmethod
-    def digest(cls,
-        status: base.UnsignedIntType, payload: base.SpotifyPayloadType):
-
-        return base.basic_make_model(cls, status, payload)
 
 
 class AvailableGenres(base.SpotifyBaseIterable[Genre]):

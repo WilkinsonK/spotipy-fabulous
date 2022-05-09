@@ -82,6 +82,14 @@ Represents an inbound dataset
 from the `Spotify API`.
 """
 
+SpotifyItem = typing.TypeVar("SpotifyItem", bound="SpotifyBaseItem")
+"""
+Represents a specific object,
+from the `Spotify API` which
+has been converted to a `Python`
+object.
+"""
+
 SpotifyTyped = typing.TypeVar("SpotifyTyped", bound="SpotifyBaseTyped")
 """
 Represents a specific kind of object
@@ -166,6 +174,24 @@ def basic_make_model(cls: type[SpotifyModel],
         payload = hash_from_schema(cls, status, payload)
 
     return cls(http_status=status, **payload)
+
+
+class SpotifyBaseItem(SpotifyBaseModel, typing.Generic[KT]):
+    """
+    Represents a specific object,
+    from the `Spotify API` which
+    has been converted to a `Python`
+    object.
+    """
+
+    value: KT
+
+    def __str__(self):
+        return str(self.value)
+
+    @classmethod
+    def digest(cls, status: UnsignedIntType, payload: SpotifyPayloadType):
+        return basic_make_model(cls, status, payload)
 
 
 class SpotifyBaseTyped(SpotifyBaseModel, typing.Generic[SpotifyModel]):
