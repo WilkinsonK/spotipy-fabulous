@@ -2,11 +2,7 @@
 models/base.py
 """
 
-import abc
-import http
-import itertools
-import re
-import typing
+import abc, http, itertools, re, typing
 
 from pydantic import BaseModel, validator
 
@@ -141,7 +137,7 @@ class SpotifyBaseModel(abc.ABC, BaseModel):
 
     @validator("http_status")
     def validate_status_code(cls, value):
-        if isinstance(value, int):
+        if isinstance(value, (int, UnsignedInt)):
             value = http.HTTPStatus(value)
         return value
 
@@ -187,7 +183,7 @@ class SpotifyBaseItem(SpotifyBaseModel, typing.Generic[KT]):
     value: KT
 
     def __str__(self):
-        return str(self.value)
+        return f"{type(self).__qualname__}[{self.value!r}]"
 
     @classmethod
     def digest(cls, status: UnsignedIntType, payload: SpotifyPayloadType):
@@ -391,7 +387,7 @@ def digest_error(payload: SpotifyPayloadType):
 
 def digest(payload: SpotifyPayloadType, *,
     status: UnsignedInt = None,
-    model: type[SpotifyModel] = None) -> SpotifyModel | SpotifyErrorModel:
+    model: type[SpotifyModel] = None) -> SpotifyModel:
     """
     Collapses an inbound payload into
     the target model.

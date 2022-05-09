@@ -28,4 +28,7 @@ class AvailableMarkets(base.SpotifyBaseIterable[MarketCode]):
 
 
 if __name__ == "__main__":
-    print(base.digest(["CA", "MX", "US"], model=AvailableMarkets))
+    x = base.digest(["CA", "MX", "US"], model=AvailableMarkets)
+
+    for i in x:
+        print(i)
