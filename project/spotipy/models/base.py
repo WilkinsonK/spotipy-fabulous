@@ -106,7 +106,7 @@ Represents a series of items in
 sequence.
 """
 
-SpotifyPayload       = dict[KT, VT] | typing.Iterable
+SpotifyPayload       = dict[KT, VT] | list | tuple
 SpotifyPayloadDigest = dict[str, typing.Any] # Because  Liskov Principle...
 
 
@@ -242,7 +242,7 @@ class SpotifyBaseIterable(SpotifyBaseModel, typing.Generic[SpotifyModel]):
         items     = []
 
         for item in payload:
-            item = hash_from_schema(cls, status, item)
+            item = hash_from_schema(model_cls, status, item)
             item.pop("http_status")
             items.append(model_cls.digest(status, item))
 
@@ -321,7 +321,7 @@ class SpotifyBaseCollection(SpotifyBaseModel, typing.Generic[SpotifyModel]):
     @validator("href", "next", "previous")
     def validate_urls(cls, value):
         if value:
-            return UrlPathType(value)
+            return UrlPath(value)
 
 
 class SpotifyErrorModel(SpotifyBaseModel):
@@ -351,9 +351,21 @@ class SpotifyErrorModel(SpotifyBaseModel):
         return cls(http_status=status, error=payload)
 
 
-def digest(payload: SpotifyPayloadDigest, *,
+def digest_error(payload: SpotifyPayloadType):
+    """
+    Breaks down a given payload
+    into a `SpotifyErrorModel` object.
+    """
+
+    _payload = hash_from_schema(SpotifyErrorModel, UnsignedInt(0), payload)
+    _status  = _payload["error"]["status"]
+
+    return SpotifyErrorModel.digest(_status, _payload)
+
+
+def digest(payload: SpotifyPayloadType, *,
     status: UnsignedInt = None,
-    model: type[SpotifyModel] = None) -> SpotifyModel:
+    model: type[SpotifyModel] = None) -> SpotifyModel | SpotifyErrorModel:
     """
     Collapses an inbound payload into
     the target model.
@@ -364,8 +376,7 @@ def digest(payload: SpotifyPayloadDigest, *,
     """
 
     if "error" in payload:
-        _status = UnsignedInt(payload["error"]["status"])
-        return SpotifyErrorModel.digest(_status, payload)
+        return digest_error(payload)
 
     # Assume response status is
     # `CREATED` if none given.

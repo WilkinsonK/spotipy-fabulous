@@ -36,3 +36,7 @@ class AvailableMarkets(base.SpotifyBaseIterable[MarketCode]):
 
     :endpoint: /markets
     """
+
+
+if __name__ == "__main__":
+    print(base.digest(["CA", "MX", "US"], model=AvailableMarkets))
