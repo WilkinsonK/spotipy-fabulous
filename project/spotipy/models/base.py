@@ -8,6 +8,8 @@ base class, `SpotifyBaseModel`, all other subsequent
 bases and generics are designed for the following
 purposes.
 
+See: https://developer.spotify.com/documentation/web-api/reference/#/
+
 ```python
 fromp spotipy import models
 
@@ -326,11 +328,14 @@ class SpotifyBaseIterable(SpotifyBaseModel, typing.Generic[SpotifyModel]):
     sequence.
     """
 
-    items: typing.Iterable[SpotifyModel]
+    items: list[SpotifyModel]
     total: UnsignedInt
 
     def __iter__(self):
         return iter(self.items)
+
+    def __getitem__(self, idx: int) -> SpotifyModel:
+        return self.items[idx]
 
     @classmethod
     def digest(cls, status: UnsignedIntType, payload: typing.Iterable):

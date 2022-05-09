@@ -1,14 +1,14 @@
 from spotipy.models import base
 
 
-class Genre(base.SpotifyBaseItem[str]):
+class GenreItem(base.SpotifyBaseItem[str]):
     """
     String representing some
     genre.
     """
 
 
-class AvailableGenres(base.SpotifyBaseIterable[Genre]):
+class AvailableGenresIterable(base.SpotifyBaseIterable[GenreItem]):
     """
     List of available genres seed
     parameter values for
