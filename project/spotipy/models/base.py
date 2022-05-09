@@ -243,7 +243,6 @@ def basic_make_model(cls: type[SpotifyModel],
 
     if not isinstance(payload, dict):
         payload = hash_from_schema(cls, status, payload)
-
     return cls(http_status=status, **payload)
 
 

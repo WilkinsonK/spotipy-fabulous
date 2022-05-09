@@ -2,6 +2,7 @@ import typing
 
 from pydantic import validator
 
+from spotipy import models
 from spotipy.models import base
 
 
@@ -28,7 +29,7 @@ class AvailableMarkets(base.SpotifyBaseIterable[MarketCode]):
 
 
 if __name__ == "__main__":
-    x = base.digest(["CA", "MX", "US"], model=AvailableMarkets)
+    x = models.digest(["CA", "MX", "US"], model=AvailableMarkets)
 
     for i in x:
         print(i)
