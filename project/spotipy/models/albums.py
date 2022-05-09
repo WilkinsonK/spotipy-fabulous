@@ -38,7 +38,7 @@ class AlbumModel(base.SpotifyBaseTyped):
     value is known.
     """
 
-    restrictions: dict[str, components.Restriction]
+    restrictions: dict[str, components.RestrictionItem]
     """
     Included in the response when a
     content restriction is applied.
