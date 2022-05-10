@@ -1,9 +1,9 @@
 import datetime, enum
 
-from spotipy.models import base, components, markets
+from spotipy.models import artists, base, components, markets, tracks
 
 
-class AlbumModel(base.SpotifyBaseTyped):
+class AlbumTyped(base.SpotifyBaseTyped):
     """
     An album.
 
@@ -42,4 +42,14 @@ class AlbumModel(base.SpotifyBaseTyped):
     """
     Included in the response when a
     content restriction is applied.
+    """
+
+    artists: artists.ArtistsIterable
+    """
+    The artists of this album.
+    """
+
+    tracks: base.SpotifyBaseCollection[tracks.TrackTyped]
+    """
+    the tracks of the album.
     """

@@ -180,6 +180,13 @@ Represents a series of items in
 sequence.
 """
 
+SpotifyCollectionItem = typing.TypeVar(
+    "SpotifyCollectionItem", bound="SpotifyBaseCollectionItem")
+"""
+Represents a series of objects
+in sequence.
+"""
+
 SpotifyCollection = typing.TypeVar(
     "SpotifyCollection", bound="SpotifyBaseCollection")
 """
@@ -246,6 +253,23 @@ def basic_make_model(cls: type[SpotifyModel],
     if not isinstance(payload, dict):
         payload = hash_from_schema(cls, status, payload)
     return cls(http_status=status, **payload)
+
+
+def iters_make_model(cls: type["SpotifyBaseIterable[SpotifyModel]"],
+    status: UnsignedInt, payload: typing.Iterable):
+    """
+    Standard iterable model digestion.
+    """
+
+    model_cls = cls.get_model_cls()
+    items     = []
+
+    for item in payload:
+        item = hash_from_schema(model_cls, status, item)
+        item.pop("http_status")
+        items.append(model_cls.digest(status, item))
+
+    return cls(http_status=status, items=items, total=len(items))
 
 
 class SpotifyBaseItem(SpotifyBaseModel, typing.Generic[KT]):
@@ -339,15 +363,7 @@ class SpotifyBaseIterable(SpotifyBaseModel, typing.Generic[SpotifyModel]):
 
     @classmethod
     def digest(cls, status: UnsignedIntType, payload: typing.Iterable):
-        model_cls = cls.get_model_cls()
-        items     = []
-
-        for item in payload:
-            item = hash_from_schema(model_cls, status, item)
-            item.pop("http_status")
-            items.append(model_cls.digest(status, item))
-
-        return cls(http_status=status, items=items, total=len(items))
+        return iters_make_model(cls, status, payload)
 
     @classmethod
     def get_model_cls(cls) -> type[SpotifyModel]:
@@ -358,10 +374,11 @@ class SpotifyBaseIterable(SpotifyBaseModel, typing.Generic[SpotifyModel]):
         return cls.__orig_bases__[0].__args__[0] #type: ignore[attr-defined]
 
 
-class SpotifyBaseCollection(SpotifyBaseModel, typing.Generic[SpotifyModel]):
+class SpotifyBaseCollectionItem(
+    SpotifyBaseModel, typing.Generic[SpotifyModel]):
     """
-    Represents a series of items in
-    sequence.
+    Represents a series of objects
+    in sequence.
     """
 
     items: typing.Iterable[SpotifyModel]
@@ -407,13 +424,7 @@ class SpotifyBaseCollection(SpotifyBaseModel, typing.Generic[SpotifyModel]):
 
     @classmethod
     def digest(cls, status: UnsignedIntType, payload: SpotifyPayloadType):
-        if not isinstance(payload, dict):
-            payload = hash_from_schema(cls, status, payload)
-
-        items = {}
-        for key, coll in payload.items():
-            items[key] = basic_make_model(cls, status, coll)
-        return cls(http_status=status, **payload)
+        return basic_make_model(cls, status, payload)
 
     @validator("limit", "offset")
     def validate_limits(cls, value):
@@ -423,6 +434,21 @@ class SpotifyBaseCollection(SpotifyBaseModel, typing.Generic[SpotifyModel]):
     def validate_urls(cls, value):
         if value:
             return UrlPath(value)
+
+
+class SpotifyBaseCollection(
+    SpotifyBaseModel, typing.Generic[SpotifyCollectionItem]):
+    """
+    Represents a series of items in
+    sequence.
+    """
+
+    items: dict[str, SpotifyCollectionItem]
+    total: UnsignedInt
+
+    @classmethod
+    def digest(cls, status: UnsignedIntType, payload: SpotifyPayloadType):
+        print(payload)
 
 
 class SpotifyErrorModel(SpotifyBaseModel):
@@ -442,6 +468,21 @@ class SpotifyErrorModel(SpotifyBaseModel):
         return cls(http_status=status, error=payload)
 
 
+def digest_collection(cls: type[SpotifyModel],
+    status: UnsignedInt, payload: SpotifyPayloadDigest):
+    """
+    Break down a series of objects
+    into a series of `SpotifyCollection`
+    objects.
+    """
+
+    for name, item in payload.items():
+        item.pop("http_status", None)
+        payload[name] = SpotifyBaseCollectionItem.digest(status, item)
+
+    return cls.digest(status, payload)
+
+
 def digest_error(payload: SpotifyPayloadType):
     """
     Breaks down a given payload
@@ -454,7 +495,7 @@ def digest_error(payload: SpotifyPayloadType):
     return SpotifyErrorModel.digest(_status, _payload)
 
 
-def digest(payload: SpotifyPayloadType, *,
+def digest(payload: SpotifyPayloadDigest, *,
     status: UnsignedInt = None,
     model: type[SpotifyModel] = None) -> SpotifyModel:
     """
@@ -464,6 +505,14 @@ def digest(payload: SpotifyPayloadType, *,
     If the given payload contains the
     key, `error`, instead returns a
     `SpotifyErrorModel`.
+
+    :payload: dict -- inbound JSON object.
+
+    :model: SpotifyModel -- Model to digest
+    data into.
+
+    :status: UnsignedInt -- response code.
+
     """
 
     if "error" in payload:
@@ -473,11 +522,15 @@ def digest(payload: SpotifyPayloadType, *,
     # `CREATED` if none given.
     _status = status or UnsignedInt(201)
 
+
     # model param is still a
     # required value.
     # Needs explicit declaration.
     if model is None:
         raise errors.SpotifyValidationError("param 'model' must not be None.")
+
+    if issubclass(model, SpotifyBaseCollection):
+        return digest_collection(model, _status, payload)
 
     return model.digest(_status, payload) #type: ignore[return-value]
 
@@ -503,3 +556,7 @@ def expand(model: SpotifyModel) -> SpotifyPayloadDigest:
     if isinstance(model, SpotifyErrorModel):
         return payload["error"]
     return payload
+
+
+if __name__ == "__main__":
+    x = digest({"albums": {}, "tracks": {}, "artists": {}}, model=SpotifyBaseCollection)
