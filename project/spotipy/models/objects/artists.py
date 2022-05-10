@@ -9,5 +9,5 @@ class ArtistsIterable(base.SpotifyBaseIterable[ArtistTyped]):
     ...
 
 
-class ArtistsCollection(base.SpotifyBaseCollection[ArtistTyped]):
+class ArtistsCollection(base.SpotifyBaseCollectionItem):
     ...

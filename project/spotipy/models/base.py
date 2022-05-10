@@ -87,7 +87,13 @@ import spotipy.errors as errors
 
 
 KT = typing.TypeVar("KT")
+"""Key Type."""
+
 VT = typing.TypeVar("VT")
+"""Value Type."""
+
+NT = typing.TypeVar("NT")
+"""Node Type."""
 
 UnsignedIntType = typing.TypeVar(
     "UnsignedIntType", bound="UnsignedInt", contravariant=True)
@@ -174,17 +180,10 @@ a collection of refrerences to it's
 relationships.
 """
 
-SpotifyIterable = typing.TypeVar("SpotifyIterable", bound="SpotifyBaseIterable")
+SpotifyMap = typing.TypeVar("SpotifyMap", bound="SpotifyBaseMap")
 """
 Represents a series of items in
 sequence.
-"""
-
-SpotifyCollectionItem = typing.TypeVar(
-    "SpotifyCollectionItem", bound="SpotifyBaseCollectionItem")
-"""
-Represents a series of objects
-in sequence.
 """
 
 SpotifyCollection = typing.TypeVar(
@@ -198,7 +197,7 @@ SpotifyPayload       = dict[KT, VT] | list | tuple
 SpotifyPayloadDigest = dict[str, typing.Any] # Because  Liskov Principle...
 
 
-class SpotifyBaseModel(abc.ABC, BaseModel):
+class SpotifyBaseModel(abc.ABC, BaseModel, typing.Generic[NT]):
     """
     Represents a inbound payload in
     the form of an object.
@@ -210,14 +209,29 @@ class SpotifyBaseModel(abc.ABC, BaseModel):
     """
 
     @classmethod
-    @abc.abstractmethod
     def digest(cls,
-        status: UnsignedIntType,
-        payload: SpotifyPayloadType) -> "SpotifyBaseModel":
+        status: UnsignedIntType, payload: SpotifyPayloadType) -> SpotifyModel:
         """
         Breaks the given payload into
         an instance of this `SpotifyModel`.
         """
+        return basic_make_model(cls, status, payload)
+
+    @classmethod
+    def get_node_cls(cls) -> type[NT]:
+        """
+        Retrieve the model class attributed
+        to this Iterable.
+        """
+
+        # Locate the generic alias
+        idx = 0
+        while (parent := cls.__orig_bases__[idx]): #type: ignore[attr-defined]
+            if hasattr(parent, "__args__"):
+                break
+            idx += 1
+
+        return parent.__args__[0]
 
     @validator("http_status")
     def validate_status_code(cls, value):
@@ -225,54 +239,27 @@ class SpotifyBaseModel(abc.ABC, BaseModel):
             value = http.HTTPStatus(value)
         return value
 
-
-def hash_from_schema(cls: type[SpotifyModel],
-    status: UnsignedIntType, data: typing.Iterable):
+class SpotifyBaseMap(SpotifyBaseModel[SpotifyModel]):
     """
-    Breaks down some iterable into
-    a hash based on the given
-    `SpotifyModel` schema.
+    Represents a series of items in
+    sequence.
     """
 
-    properties = cls.schema()["properties"]
+    items: list[SpotifyModel]
+    total: UnsignedInt
 
-    if isinstance(data, str):
-        data = status, data
-    else:
-        data = (status, *data)
+    def __iter__(self):
+        return iter(self.items)
 
-    return dict(itertools.zip_longest(properties, data))
+    def __getitem__(self, idx: int) -> SpotifyModel:
+        return self.items[idx]
 
-
-def basic_make_model(cls: type[SpotifyModel],
-    status: UnsignedInt, payload: SpotifyPayloadType):
-    """
-    Standard expected model digestion.
-    """
-
-    if not isinstance(payload, dict):
-        payload = hash_from_schema(cls, status, payload)
-    return cls(http_status=status, **payload)
+    @classmethod
+    def digest(cls, status: UnsignedIntType, payload: typing.Iterable):
+        return iters_make_model(cls, status, payload)
 
 
-def iters_make_model(cls: type["SpotifyBaseIterable[SpotifyModel]"],
-    status: UnsignedInt, payload: typing.Iterable):
-    """
-    Standard iterable model digestion.
-    """
-
-    model_cls = cls.get_model_cls()
-    items     = []
-
-    for item in payload:
-        item = hash_from_schema(model_cls, status, item)
-        item.pop("http_status")
-        items.append(model_cls.digest(status, item))
-
-    return cls(http_status=status, items=items, total=len(items))
-
-
-class SpotifyBaseItem(SpotifyBaseModel, typing.Generic[KT]):
+class SpotifyBaseItem(SpotifyBaseModel[VT]):
     """
     Represents a specific object,
     from the `Spotify API` which
@@ -280,17 +267,13 @@ class SpotifyBaseItem(SpotifyBaseModel, typing.Generic[KT]):
     object.
     """
 
-    value: KT
+    value: VT
 
     def __str__(self):
         return f"{type(self).__qualname__}[{self.value!r}]"
 
-    @classmethod
-    def digest(cls, status: UnsignedIntType, payload: SpotifyPayloadType):
-        return basic_make_model(cls, status, payload)
 
-
-class SpotifyBaseTyped(SpotifyBaseModel, typing.Generic[SpotifyModel]):
+class SpotifyBaseTyped(SpotifyBaseModel[SpotifyModel]):
     """
     Represents a specific kind of object
     coming from the `Spotify API`.
@@ -336,46 +319,13 @@ class SpotifyBaseTyped(SpotifyBaseModel, typing.Generic[SpotifyModel]):
     Images related to this object.
     """
 
-    @classmethod
-    def digest(cls, status: UnsignedInt, payload: SpotifyPayload):
-        return basic_make_model(cls, status, payload)
-
     @validator("href", "external_urls")
     def validate_urls(cls, value):
         if value:
             return UrlPathType(value)
 
 
-class SpotifyBaseIterable(SpotifyBaseModel, typing.Generic[SpotifyModel]):
-    """
-    Represents a series of items in
-    sequence.
-    """
-
-    items: list[SpotifyModel]
-    total: UnsignedInt
-
-    def __iter__(self):
-        return iter(self.items)
-
-    def __getitem__(self, idx: int) -> SpotifyModel:
-        return self.items[idx]
-
-    @classmethod
-    def digest(cls, status: UnsignedIntType, payload: typing.Iterable):
-        return iters_make_model(cls, status, payload)
-
-    @classmethod
-    def get_model_cls(cls) -> type[SpotifyModel]:
-        """
-        Retrieve the model class attributed
-        to this Iterable.
-        """
-        return cls.__orig_bases__[0].__args__[0] #type: ignore[attr-defined]
-
-
-class SpotifyBaseCollectionItem(
-    SpotifyBaseModel, typing.Generic[SpotifyModel]):
+class SpotifyBaseCollection(SpotifyBaseModel[SpotifyModel]):
     """
     Represents a series of objects
     in sequence.
@@ -422,10 +372,6 @@ class SpotifyBaseCollectionItem(
     items.
     """
 
-    @classmethod
-    def digest(cls, status: UnsignedIntType, payload: SpotifyPayloadType):
-        return basic_make_model(cls, status, payload)
-
     @validator("limit", "offset")
     def validate_limits(cls, value):
         return UnsignedInt(value)
@@ -434,21 +380,6 @@ class SpotifyBaseCollectionItem(
     def validate_urls(cls, value):
         if value:
             return UrlPath(value)
-
-
-class SpotifyBaseCollection(
-    SpotifyBaseModel, typing.Generic[SpotifyCollectionItem]):
-    """
-    Represents a series of items in
-    sequence.
-    """
-
-    items: dict[str, SpotifyCollectionItem]
-    total: UnsignedInt
-
-    @classmethod
-    def digest(cls, status: UnsignedIntType, payload: SpotifyPayloadType):
-        print(payload)
 
 
 class SpotifyErrorModel(SpotifyBaseModel):
@@ -468,22 +399,54 @@ class SpotifyErrorModel(SpotifyBaseModel):
         return cls(http_status=status, error=payload)
 
 
-def digest_collection(cls: type[SpotifyModel],
-    status: UnsignedInt, payload: SpotifyPayloadDigest):
+def hash_from_schema(cls: type[SpotifyModel],
+    status: UnsignedIntType, data: typing.Iterable):
     """
-    Break down a series of objects
-    into a series of `SpotifyCollection`
-    objects.
+    Breaks down some iterable into
+    a hash based on the given
+    `SpotifyModel` schema.
     """
 
-    for name, item in payload.items():
-        item.pop("http_status", None)
-        payload[name] = SpotifyBaseCollectionItem.digest(status, item)
+    properties = cls.schema()["properties"]
 
-    return cls.digest(status, payload)
+    if isinstance(data, str):
+        data = status, data
+    else:
+        data = (status, *data)
+
+    return dict(itertools.zip_longest(properties, data))
 
 
-def digest_error(payload: SpotifyPayloadType):
+def basic_make_model(cls: type[SpotifyModel],
+    status: UnsignedInt, payload: SpotifyPayloadType):
+    """
+    Standard expected model digestion.
+    """
+
+    if not isinstance(payload, dict):
+        payload = hash_from_schema(cls, status, payload)
+    return cls(http_status=status, **payload)
+
+
+def iters_make_model(cls: type[SpotifyBaseMap[SpotifyModel]],
+    status: UnsignedInt, payload: typing.Iterable):
+    """
+    Standard iterable model digestion.
+    """
+
+    model_cls = cls.get_node_cls()
+    items     = [] #type: ignore[var-annotated]
+                   # unneeded type annotation.
+
+    for item in payload:
+        item = hash_from_schema(model_cls, status, item)
+        item.pop("http_status")
+        items.append(model_cls.digest(status, item))
+
+    return cls(http_status=status, items=items, total=len(items))
+
+
+def error_make_model(payload: SpotifyPayloadType):
     """
     Breaks down a given payload
     into a `SpotifyErrorModel` object.
@@ -491,7 +454,6 @@ def digest_error(payload: SpotifyPayloadType):
 
     _payload = hash_from_schema(SpotifyErrorModel, UnsignedInt(0), payload)
     _status  = _payload["error"]["status"]
-
     return SpotifyErrorModel.digest(_status, _payload)
 
 
@@ -512,11 +474,10 @@ def digest(payload: SpotifyPayloadDigest, *,
     data into.
 
     :status: UnsignedInt -- response code.
-
     """
 
     if "error" in payload:
-        return digest_error(payload)
+        return error_make_model(payload)
 
     # Assume response status is
     # `CREATED` if none given.
@@ -528,9 +489,6 @@ def digest(payload: SpotifyPayloadDigest, *,
     # Needs explicit declaration.
     if model is None:
         raise errors.SpotifyValidationError("param 'model' must not be None.")
-
-    if issubclass(model, SpotifyBaseCollection):
-        return digest_collection(model, _status, payload)
 
     return model.digest(_status, payload) #type: ignore[return-value]
 
@@ -556,7 +514,3 @@ def expand(model: SpotifyModel) -> SpotifyPayloadDigest:
     if isinstance(model, SpotifyErrorModel):
         return payload["error"]
     return payload
-
-
-if __name__ == "__main__":
-    x = digest({"albums": {}, "tracks": {}, "artists": {}}, model=SpotifyBaseCollection)
