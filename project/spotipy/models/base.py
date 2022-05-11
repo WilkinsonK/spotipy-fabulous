@@ -60,23 +60,23 @@ an identity.
 
     :usage: SpotifyBaseTyped[<SpotifyModel>]
 
-- `SpotifyBaseIterable`: Represents a series of
+- `SpotifyBaseArray`: Represents a series of
 items in sequence.
 
-    :alias: SpotifyIterable
+    :alias: SpotifyArray
 
     :param: <SpotifyModel>
 
-    :usage: SpotifyBaseIterable[<SpotifyModel>]
+    :usage: SpotifyBaseArray[<SpotifyModel>]
 
-- `SpotifyBaseCollection`: Represents a series of
+- `SpotifyBaseGroup`: Represents a series of
 typed items in sequence.
 
-    :alias: SpotifyCollection
+    :alias: SpotifyGroup
 
     :param: <SpotifyModel>
 
-    :usage: SpotifyBaseCollectio[<SpotifyModel>]
+    :usage: SpotifyBaseGroup[<SpotifyModel>]
 """
 
 import abc, http, itertools, re, typing
@@ -180,14 +180,13 @@ a collection of refrerences to it's
 relationships.
 """
 
-SpotifyMap = typing.TypeVar("SpotifyMap", bound="SpotifyBaseMap")
+SpotifyArray = typing.TypeVar("SpotifyArray", bound="SpotifyBaseArray")
 """
 Represents a series of items in
 sequence.
 """
 
-SpotifyCollection = typing.TypeVar(
-    "SpotifyCollection", bound="SpotifyBaseCollection")
+SpotifyGroup = typing.TypeVar("SpotifyGroup", bound="SpotifyBaseGroup")
 """
 Represents a series of items in
 sequence.
@@ -238,25 +237,6 @@ class SpotifyBaseModel(abc.ABC, BaseModel, typing.Generic[NT]):
         if isinstance(value, (int, UnsignedInt)):
             value = http.HTTPStatus(value)
         return value
-
-class SpotifyBaseMap(SpotifyBaseModel[SpotifyModel]):
-    """
-    Represents a series of items in
-    sequence.
-    """
-
-    items: list[SpotifyModel]
-    total: UnsignedInt
-
-    def __iter__(self):
-        return iter(self.items)
-
-    def __getitem__(self, idx: int) -> SpotifyModel:
-        return self.items[idx]
-
-    @classmethod
-    def digest(cls, status: UnsignedIntType, payload: typing.Iterable):
-        return iters_make_model(cls, status, payload)
 
 
 class SpotifyBaseItem(SpotifyBaseModel[VT]):
@@ -325,7 +305,27 @@ class SpotifyBaseTyped(SpotifyBaseModel[SpotifyModel]):
             return UrlPathType(value)
 
 
-class SpotifyBaseCollection(SpotifyBaseModel[SpotifyModel]):
+class SpotifyBaseArray(SpotifyBaseModel[SpotifyModel]):
+    """
+    Represents a series of items in
+    sequence.
+    """
+
+    items: typing.Sequence[SpotifyModel]
+    total: UnsignedInt
+
+    def __iter__(self):
+        return iter(self.items)
+
+    def __getitem__(self, idx: int) -> SpotifyModel:
+        return self.items[idx]
+
+    @classmethod
+    def digest(cls, status: UnsignedIntType, payload: typing.Iterable):
+        return iters_make_model(cls, status, payload)
+
+
+class SpotifyBaseGroup(SpotifyBaseModel[SpotifyModel]):
     """
     Represents a series of objects
     in sequence.
@@ -428,7 +428,7 @@ def basic_make_model(cls: type[SpotifyModel],
     return cls(http_status=status, **payload)
 
 
-def iters_make_model(cls: type[SpotifyBaseMap[SpotifyModel]],
+def iters_make_model(cls: type[SpotifyBaseArray[SpotifyModel]],
     status: UnsignedInt, payload: typing.Iterable):
     """
     Standard iterable model digestion.
