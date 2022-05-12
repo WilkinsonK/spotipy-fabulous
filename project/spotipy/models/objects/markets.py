@@ -20,7 +20,7 @@ class MarketCodeItem(base.SpotifyBaseItem[str]):
         return value
 
 
-class AvailableMarketsIterable(base.SpotifyBaseIterable[MarketCodeItem]):
+class AvailableMarketsIterable(base.SpotifyBaseArray[MarketCodeItem]):
     """
     List of available markets where
     `Spotify` is available.

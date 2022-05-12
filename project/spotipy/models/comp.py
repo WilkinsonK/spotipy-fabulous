@@ -1,3 +1,9 @@
+"""
+models/comp.py
+
+Internal component objects.
+"""
+
 import enum
 
 from spotipy.models import base
@@ -27,3 +33,24 @@ class RestrictionItem(base.SpotifyBaseItem[Restriction]):
     @base.validator("value")
     def validate_restriction(cls, value):
         return Restriction(value)
+
+
+class DatePrecision(str, enum.Enum):
+    """
+    Precision with which a date is known.
+    """
+
+    YEAR  = "year"
+    MONTH = "month"
+    DAY   = "day"
+
+
+class DatePrecisionItem(base.SpotifyBaseItem[DatePrecision]):
+    """
+    Represents a `date_precision`
+    object.
+    """
+
+    @base.validator("value")
+    def validate_precion(cls, value):
+        return DatePrecision(value)

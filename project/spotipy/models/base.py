@@ -81,7 +81,7 @@ typed items in sequence.
 
 import abc, http, itertools, re, typing
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, Field, validator
 
 import spotipy.errors as errors
 
@@ -192,8 +192,7 @@ Represents a series of items in
 sequence.
 """
 
-SpotifyPayload       = dict[KT, VT] | list | tuple
-SpotifyPayloadDigest = dict[str, typing.Any] # Because  Liskov Principle...
+SpotifyPayload = typing.Sequence | dict[KT, VT]
 
 
 class SpotifyBaseModel(abc.ABC, BaseModel, typing.Generic[NT]):
@@ -219,15 +218,15 @@ class SpotifyBaseModel(abc.ABC, BaseModel, typing.Generic[NT]):
     @classmethod
     def get_node_cls(cls) -> type[NT]:
         """
-        Retrieve the model class attributed
-        to this Iterable.
+        Retrieve the type attributed
+        to this object.
         """
 
         # Locate the generic alias
         idx = 0
         while (parent := cls.__orig_bases__[idx]): #type: ignore[attr-defined]
             if hasattr(parent, "__args__"):
-                break
+                return parent
             idx += 1
 
         return parent.__args__[0]
@@ -428,7 +427,8 @@ def basic_make_model(cls: type[SpotifyModel],
     return cls(http_status=status, **payload)
 
 
-def iters_make_model(cls: type[SpotifyBaseArray[SpotifyModel]],
+def iters_make_model(
+    cls: type[SpotifyBaseArray[SpotifyModel]],
     status: UnsignedInt, payload: typing.Iterable):
     """
     Standard iterable model digestion.
@@ -446,6 +446,15 @@ def iters_make_model(cls: type[SpotifyBaseArray[SpotifyModel]],
     return cls(http_status=status, items=items, total=len(items))
 
 
+def group_make_model(cls: type[SpotifyModel],
+    status: UnsignedInt, payload: SpotifyPayloadType):
+    """
+    Break down a given payload into
+    a single group or a iterable of
+    groups.
+    """
+
+
 def error_make_model(payload: SpotifyPayloadType):
     """
     Breaks down a given payload
@@ -457,9 +466,10 @@ def error_make_model(payload: SpotifyPayloadType):
     return SpotifyErrorModel.digest(_status, _payload)
 
 
-def digest(payload: SpotifyPayloadDigest, *,
+def digest(payload: SpotifyPayload, *,
     status: UnsignedInt = None,
-    model: type[SpotifyModel] = None) -> SpotifyModel:
+    model: type[SpotifyModel] = None,
+    isgroup: bool = None) -> SpotifyModel:
     """
     Collapses an inbound payload into
     the target model.
@@ -474,6 +484,9 @@ def digest(payload: SpotifyPayloadDigest, *,
     data into.
 
     :status: UnsignedInt -- response code.
+
+    :isgroup: bool -- digest data as a
+    group model.
     """
 
     if "error" in payload:
@@ -482,7 +495,6 @@ def digest(payload: SpotifyPayloadDigest, *,
     # Assume response status is
     # `CREATED` if none given.
     _status = status or UnsignedInt(201)
-
 
     # model param is still a
     # required value.
@@ -499,7 +511,7 @@ Fields that are to be ignored on model expansion.
 """
 
 
-def expand(model: SpotifyModel) -> SpotifyPayloadDigest:
+def expand(model: SpotifyModel) -> SpotifyPayload:
     """
     Restore a model to represent a
     payload.

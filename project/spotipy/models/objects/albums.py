@@ -1,55 +1,5 @@
-import datetime, enum
-
-from spotipy.models import artists, base, components, markets, tracks
+from spotipy.models import base, comp
 
 
-class AlbumTyped(base.SpotifyBaseTyped):
-    """
-    An album.
-
-    :endpoint: /albums/{id}
-    """
-
-    album_type: str
-    """
-    The type of the album.
-    """
-
-    total_tracks: int
-    """
-    Number of tracks in the album.
-    """
-
-    available_markets: markets.AvailableMarketsIterable
-    """
-    MarketCodes where this album is
-    available.
-    """
-
-    release_date: datetime.date
-    """
-    When this album was first
-    released.
-    """
-
-    release_date_precision: components.DatePrecisionItem
-    """
-    Precision with which `release_date`
-    value is known.
-    """
-
-    restrictions: dict[str, components.RestrictionItem]
-    """
-    Included in the response when a
-    content restriction is applied.
-    """
-
-    artists: artists.ArtistsIterable
-    """
-    The artists of this album.
-    """
-
-    tracks: base.SpotifyBaseCollection[tracks.TrackTyped]
-    """
-    the tracks of the album.
-    """
+class Album(base.SpotifyBaseTyped):
+    pass

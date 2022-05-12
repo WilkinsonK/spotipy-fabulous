@@ -8,7 +8,7 @@ class GenreItem(base.SpotifyBaseItem[str]):
     """
 
 
-class AvailableGenresIterable(base.SpotifyBaseIterable[GenreItem]):
+class AvailableGenresIterable(base.SpotifyBaseArray[GenreItem]):
     """
     List of available genres seed
     parameter values for
