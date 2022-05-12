@@ -325,13 +325,13 @@ class SpotifyBaseArray(SpotifyBaseModel[SpotifyModel]):
         return iters_make_model(cls, status, payload)
 
 
-class SpotifyBaseGroup(SpotifyBaseModel[SpotifyModel]):
+class SpotifyBaseGroup(SpotifyBaseModel[SpotifyArray]):
     """
     Represents a series of objects
     in sequence.
     """
 
-    items: typing.Iterable[SpotifyModel]
+    items: SpotifyArray
     """
     The requested content.
     """
