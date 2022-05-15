@@ -283,7 +283,7 @@ class SpotifyBaseTyped(SpotifyBaseModel[SpotifyModel]):
     A link to the `Web API` endpoint for this object.
     """
 
-    external_urls: typing.Iterable[UrlPath]
+    external_urls: typing.Mapping[str, UrlPath]
     """
     Known external `URLS` for this object.
     """
@@ -301,7 +301,7 @@ class SpotifyBaseTyped(SpotifyBaseModel[SpotifyModel]):
     @validator("href", "external_urls")
     def validate_urls(cls, value):
         if value:
-            return UrlPathType(value)
+            return UrlPath(value)
 
 
 class SpotifyBaseArray(SpotifyBaseModel[SpotifyModel]):

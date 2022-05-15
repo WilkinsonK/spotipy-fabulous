@@ -30,21 +30,6 @@ class DatePrecision(base.SpotifyBaseItem[DatePrecisionEnum]):
         return DatePrecisionEnum(value)
 
 
-class RestrictionEnum(str, enum.Enum):
-    """
-    The reason for the restriction. Albums may
-    be restricted if the content is not available
-    in a given market, to the user's subscription
-    type, or when the user's account is set to
-    not play explicit content. Additional reasons
-    may be added in the future.
-    """
-
-    MARKET   = "market"   # Out of market range.
-    PRODUCT  = "product"  # Limited due to subscription.
-    EXPLICIT = "explicit" # Content may be blocked.
-
-
 class Genre(base.SpotifyBaseItem[str]):
     """
     String representing some
@@ -83,16 +68,54 @@ class Popularity(int):
                 f"values ranging from 0-100, not {value!s}!")
         return super(Popularity, cls).__new__(cls, value)
 
+class ResumePoint(base.SpotifyBaseModel[None]):
+    """
+    The user's most recent position
+    in the parent.
+    """
 
-class Restriction(base.SpotifyBaseItem[RestrictionEnum]):
+    fully_played: bool
+    """
+    Whether or not the parent
+    was fully played.
+    """
+
+    resume_position_ms: int
+    """
+    The user's most recent
+    position in milliseconds.
+    """
+
+
+class RestrictionEnum(str, enum.Enum):
+    """
+    The reason for the restriction. Albums may
+    be restricted if the content is not available
+    in a given market, to the user's subscription
+    type, or when the user's account is set to
+    not play explicit content. Additional reasons
+    may be added in the future.
+    """
+
+    MARKET   = "market"   # Out of market range.
+    PRODUCT  = "product"  # Limited due to subscription.
+    EXPLICIT = "explicit" # Content may be blocked.
+
+
+class Restriction(base.SpotifyBaseModel[None]):
     """
     Represents a restriction placed
     on some `Spotify Object`.
     """
 
-    @base.validator("value")
-    def validate_restriction(cls, value):
-        return RestrictionEnum(value)
+    reason: RestrictionEnum
+
+    @base.validator("reason")
+    def validate_reason(cls, reason):
+        # Enumeration instantiation
+        # should be sufficient for
+        # 'validation'.
+        return RestrictionEnum(reason)
 
 
 class MarketCode(base.SpotifyBaseItem[str]):
