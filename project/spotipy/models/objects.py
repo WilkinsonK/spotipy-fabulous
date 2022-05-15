@@ -308,7 +308,7 @@ class Track(base.SpotifyBaseTyped):
     market.
     """
 
-    linked_from: "Track"
+    linked_from: "Track" | None
     """
     Part of the response when track
     relinking is applied, and the
