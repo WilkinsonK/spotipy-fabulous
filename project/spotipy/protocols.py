@@ -1,4 +1,8 @@
-import typing
+"""
+Definitions below are for the interfaces used in
+this package.
+"""
+
 from abc import abstractmethod
 from typing import Protocol
 

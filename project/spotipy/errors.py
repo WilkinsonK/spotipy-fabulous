@@ -75,3 +75,11 @@ class OAuth2Exception(Exception):
     Raised in the event of any errors related to
     `OAuth2.0` and authentication events.
     """
+
+
+class OAuth2BadStateError(OAuth2Exception):
+    """
+    Raised in the event where the state returned
+    from a token request is not the same as
+    what was expected.
+    """

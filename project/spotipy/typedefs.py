@@ -3,7 +3,7 @@ Generic types used at the top level of this
 package.
 """
 
-from typing import NewType, TypeVar, Literal
+from typing import Any, Literal, NewType, TypedDict, TypeVar
 
 
 # --------------------------------------------- #
@@ -42,3 +42,21 @@ CharToken = TypeVar("CharToken", str, bytes)
 An array of characters in sequence used typically
 for auth, identification or encryption.
 """
+
+# --------------------------------------------- #
+# Structures and Mappings.
+# --------------------------------------------- #
+
+MetaData = NewType("MetaData", dict[str, Any])
+"""
+Generic meta-mapping. Used for instance
+contruction.
+"""
+
+
+class TokenMetaData(TypedDict):
+    """Data related to Authentication Tokens."""
+
+    access_token: str
+    expires_in: int
+    expires_at: int
