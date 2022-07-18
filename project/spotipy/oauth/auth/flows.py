@@ -16,6 +16,17 @@ Current available Auth Flows:
 * AuthorizationFlow
 * PKCEFlow
 
+```python
+from spotipy import oauth
+
+auth_flow = oauth.AuthorizationFlow(
+    "client_id-string",
+    "client_secret-string",
+    redirect_url="localhost:9090")
+
+print(auth_flow.get_access_token())
+```
+
 NOTE: Because "Implicit Grant" is not a recommened
 authentication flow, per `Spotify API` documentation,
 there is no object defined for it's purpose.
