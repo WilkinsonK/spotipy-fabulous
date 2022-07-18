@@ -6,7 +6,7 @@ this package.
 from abc import abstractmethod
 from typing import Protocol
 
-from spotipy import typedefs as td
+from ampyr import typedefs as td
 
 
 class RemoteAccessManager(Protocol):

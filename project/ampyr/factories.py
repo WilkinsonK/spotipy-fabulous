@@ -5,8 +5,7 @@ used in this package.
 
 from typing import Callable
 
-from spotipy import typedefs as td
-
+from ampyr import typedefs as td
 
 InstanceFactory = Callable[[type[td.GT]], td.GT]
 """
