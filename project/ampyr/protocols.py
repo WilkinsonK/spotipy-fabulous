@@ -53,6 +53,17 @@ class CacheManager(Protocol[td.GT_co]):
         """
 
 
+class HasCacheHandler(Protocol):
+    """
+    Some object which has an attribute named
+    'cache_manager' and is of type
+    `CacheManager`.
+    """
+
+    cache_manager: CacheManager
+    """Brokers data to/from some cache."""
+
+
 class OAuth2Flow(Protocol):
     """
     Represents an Authentication Flow procedure
@@ -63,7 +74,7 @@ class OAuth2Flow(Protocol):
 
     @abstractmethod
     def aquire(self) -> td.CharToken:
-        """Attempt to retrieve and auth token."""
+        """Attempt to retrieve an auth token."""
 
 
 class MetaConfig(Protocol):

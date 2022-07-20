@@ -16,11 +16,12 @@ using RESTful callouts.
 # requests to a target host.
 # --------------------------------------------- #
 
-import http
+import http, urllib.parse as urlparse
 
 import requests
 
-from ampyr import errors, protocols as pt, typedefs as td, factories as ft
+from ampyr import errors, factories as ft, protocols as pt, typedefs as td
+from ampyr import cache
 from ampyr.oauth2 import configs, tokens
 
 DEFAULT_OAUTH_URL = "http://127.0.0.1"
@@ -36,10 +37,7 @@ some `OAuth2.0` server.
 """
 
 
-FlowCacheManager = pt.CacheManager[td.TokenMetaData]
-
-
-class SimpleAuthFlow(pt.OAuth2Flow):
+class SimpleOAuth2Flow(pt.OAuth2Flow):
     """
     Basic implementation. Defines constructor for
     all subsequent derivatives.
@@ -47,13 +45,13 @@ class SimpleAuthFlow(pt.OAuth2Flow):
     Warning: Not meant to be used directly.
     """
 
-    cache_manager: FlowCacheManager
+    cache_manager: pt.CacheManager
     """
     Interacts with some cache that is expected to
     store token data.
     """
 
-    cache_class: type[FlowCacheManager]
+    cache_class: type[pt.CacheManager]
     """
     Class used to build new `CacheManager`
     objects.
@@ -103,7 +101,7 @@ class SimpleAuthFlow(pt.OAuth2Flow):
 
     def __init__(self, client_id: str, client_secret: str,
         client_username: td.OptString = None, *,
-        cache_class: td.Optional[type[FlowCacheManager]] = None,
+        cache_class: td.Optional[type[pt.CacheManager]] = None,
         cache_factory: ft.OptCacheFT = None,
         session_factory: ft.OptSessionFT = None,
         headers: td.OptRequestHeaders = None,
@@ -116,7 +114,6 @@ class SimpleAuthFlow(pt.OAuth2Flow):
         """Build some `OAuth2Flow` object."""
 
         # Initialize internal configs.
-        self._new_requests_config(headers, timeouts)
         self._new_auth_config(
             client_id,
             client_secret,
@@ -124,10 +121,11 @@ class SimpleAuthFlow(pt.OAuth2Flow):
             url_for_redirect=url_for_redirect,
             scope=scope,
             state=state)
+        self._new_requests_config(headers, timeouts)
 
         # Cache manager construction components.
         # TODO: define basic cache classes.
-        self.cache_class   = cache_class
+        self.cache_class   = cache_class or cache.MemoryCacheManager
         self.cache_factory = cache_factory
 
         # Session construction components.
@@ -206,7 +204,7 @@ class SimpleAuthFlow(pt.OAuth2Flow):
         self.session = inst
 
 
-def _aquire_token(flow: SimpleAuthFlow, key: str, *,
+def _aquire_token(flow: SimpleOAuth2Flow, key: str, *,
     factory: ft.OptTokenMetaDataFT = None) -> td.TokenMetaData:
     """
     Retrieves an access token from the target
@@ -243,7 +241,7 @@ def _aquire_token(flow: SimpleAuthFlow, key: str, *,
     return _aquire_token(flow, key, factory=factory)
 
 
-def _request_token(flow: SimpleAuthFlow, payload: td.TokenMetaData):
+def _request_token(flow: SimpleOAuth2Flow, payload: td.TokenMetaData):
     """
     Sends and outbound call to the target
     authentication server requesting a token for
@@ -253,7 +251,8 @@ def _request_token(flow: SimpleAuthFlow, payload: td.TokenMetaData):
     response = flow.session.post(
         flow.url_for_token,
         data=payload,
-        headers=flow.requests_config.headers)
+        headers=flow.requests_config.headers,
+        timeout=flow.requests_config.timeouts)
 
     # Test if there was and issue from the
     # callout, handle any subsequent errors.
@@ -274,14 +273,128 @@ def _handle_http_error(error: requests.HTTPError):
     raise errors.OAuth2Exception("something went wrong.", status=status)
 
 
-class ClientCredentials(SimpleAuthFlow):
+def _make_search_key(config: configs.AuthConfig, default: td.OptString = None):
+    """
+    Render a cache search key using this
+    credentials object.
+    """
+
+    name = config.client_username or default or "credentials"
+    return ":".join([name, config.client_id])
+
+
+def _make_param_url(baseurl: str, payload: td.MetaData):
+    """
+    Returns the given baseurl with the given
+    parameters joined to it.
+    """
+
+    # Remove any null values.
+    payload = _normalize_payload(payload)
+    return "?".join([baseurl, urlparse.urlencode(payload)])
+
+
+def _normalize_payload(payload: td.MetaData):
+    """
+    Filter out any fields in the payload that do
+    not meet the condition. Condition is
+    "exclude objects that are not truthy".
+
+    NOTE: This function returns a **copy** of the
+    given payload, not the original modified.
+    """
+
+    cleaned_data = payload.copy()
+    condition    = (lambda o: o != None)
+
+    for key, value in payload.items():
+        if condition(value):
+            continue
+        cleaned_data.pop(key)
+
+    return td.MetaData(cleaned_data)
+
+
+class ClientCredentials(SimpleOAuth2Flow):
+    """
+    This `ClientCredentialsFlow` object is used
+    in server-to-server authentication. Only
+    endpoints that do not access user information
+    are authorized using this strategy. This
+    limits the usage of this client to only
+    making callouts that require no scope(s).
+
+    This `OAuth2Flow` requires no user
+    interaction.
+    """
 
     def aquire(self):
-        search_key = ""
-        factory    = lambda: td.TokenMetaData({"grant_type": "client_credentials"})
-        return _aquire_token(self, search_key, factory=factory)["access_token"]
+        key     = _make_search_key(self.auth_config, "client_credentials")
+        factory = lambda: td.TokenMetaData({"grant_type": "client_credentials"})
+        return _aquire_token(self, key, factory=factory)["access_token"]
 
 
-if __name__ == "__main__":
-    with ClientCredentials("", "") as flow:
-        token = flow.aquire()
+class Authorization(SimpleOAuth2Flow):
+    """
+    This `AuthorizationFlow` object is used in
+    in app-based authentication primarily.
+    Provided an access scope, this flow grants
+    a wider range of access to the target host,
+    limited by what the target user allows.
+
+    This `AuthFlowClient` does require user
+    interaction.
+    """
+
+    oauth_param_keys: tuple[str, ...] = (
+        "client_id",
+        "redirect_uri",
+        "scope",
+        "state",
+        "show_dialogue",
+        "response_type")
+    """
+    Sequence of names expected to be used in an
+    oauth token request.
+    """
+
+    oauth_code: None | int
+    """
+    Code representing the state of
+    authentication.
+    """
+
+    show_dialogue: bool
+
+    @property
+    def url_for_oauth(self):
+        params = td.MetaData({
+            k:v for k,v in self.auth_config.asdict()
+            if k in self.oauth_param_keys})
+
+        params["redirect_uri"]  = self.auth_config.url_for_redirect
+        params["show_dialogue"] = self.show_dialogue
+        params["response_type"] = "code"
+
+        return _make_param_url(super().url_for_oauth, params)
+
+    def aquire(self):
+        key = _make_search_key(self.auth_config, "authorization_code")
+
+        def factory():
+            if not self.oauth_code:
+                self.oauth_code = hosts.get_response(self)
+            return _normalize_payload({
+                "redirect_uri": self.auth_config.url_for_redirect,
+                "grant_type": "authorization_code",
+                "code": self.oauth_code,
+                "scope": self.auth_config.scope,
+                "state": self.auth_config.state})
+
+        return _aquire_token(self, key, factory=factory)
+
+    def __init__(self, *args, show_dialogue: bool = False, **kwds):
+        super().__init__(*args, **kwds)
+
+        # Attributes used for browser behavior.
+        self.show_dialogue = show_dialogue
