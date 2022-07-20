@@ -67,7 +67,7 @@ def validate(data: td.OptTokenMetaData, *, scope: td.OptString = None):
         return TokenState.INVALID
 
     data_scope = str(data["scope"])
-    scope     = str(scope or data_scope)
+    scope      = str(scope or data_scope)
 
     # Ensures the scope captured in the token
     # data matches the given scope.

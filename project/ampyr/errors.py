@@ -71,10 +71,24 @@ class SpotifyNotImplementedError(SpotifyHttpError):
     status: http.HTTPStatus = http.HTTPStatus(501)
 
 
-class OAuth2Exception(SpotifyHttpError):
+class OAuth2Exception(Exception):
     """
     Raised in the event of any errors related to
     `OAuth2.0` and authentication events.
+    """
+
+
+class OAuth2HttpError(OAuth2Exception, SpotifyHttpError):
+    """
+    Raised in the event of any errors related to
+    `OAuth2.0` and HTTP events.
+    """
+
+
+class OAuth2MaxRetriesError(OAuth2Exception):
+    """
+    Raised in the event that there were too many
+    attempts in requesting an auth token.
     """
 
 

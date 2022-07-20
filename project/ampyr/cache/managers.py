@@ -17,20 +17,20 @@ class NullCacheManager(pt.CacheManager[type[None]]):
         return None
 
     def save(self, key: str, data: td.GT):
-        return None
+        return data
 
 
-class MemoryCacheManager(pt.CacheManager[td.GT_ct]):
+class MemoryCacheManager(pt.CacheManager[td.GT]):
     """
     Cache manager which stores it's inputs in
     memory during runtime.
     """
 
-    stored_data: dict[str, td.GT_ct] = dict()
+    stored_data: dict[str, td.GT] = dict()
 
     def find(self, key: str):
         return self.stored_data.get(key, None)
 
     def save(self, key: str, data: td.GT):
-        self.stored_data[key] = data #type: ignore[assignment]
+        self.stored_data[key] = data
         return data

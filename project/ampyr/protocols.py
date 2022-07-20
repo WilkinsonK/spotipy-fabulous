@@ -30,7 +30,7 @@ class RemoteAccessManager(Protocol):
         """
 
 
-class CacheManager(Protocol[td.GT_co]):
+class CacheManager(Protocol[td.GT]):
     """
     Brokers transactions of cached data.
     Primarily for the use of relieving more
@@ -38,7 +38,7 @@ class CacheManager(Protocol[td.GT_co]):
     """
 
     @abstractmethod
-    def find(self, key: str) -> None | td.GT_co:
+    def find(self, key: str) -> None | td.GT:
         """
         Attempt to retrieve data from the cache
         assigned to the given key. Returns `None`
@@ -46,7 +46,7 @@ class CacheManager(Protocol[td.GT_co]):
         """
 
     @abstractmethod
-    def save(self, key: str, data: td.GT) -> td.GT_co:
+    def save(self, key: str, data: td.GT) -> td.GT:
         """
         Attempt to insert data into the cache,
         assigning it to the given key.

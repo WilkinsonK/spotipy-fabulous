@@ -238,6 +238,7 @@ def _aquire_token(flow: SimpleOAuth2Flow, key: str, *,
     if data and "scope" not in data:
         data["scope"] = scope
     flow.cache_manager.save(key, data)
+
     return _aquire_token(flow, key, factory=factory)
 
 
@@ -270,7 +271,7 @@ def _handle_http_error(error: requests.HTTPError):
     """Handle some HTTP exception."""
 
     status = http.HTTPStatus(error.response.status_code)
-    raise errors.OAuth2Exception("something went wrong.", status=status)
+    raise errors.OAuth2HttpError("something went wrong.", status=status)
 
 
 def _make_search_key(config: configs.AuthConfig, default: td.OptString = None):
@@ -315,9 +316,9 @@ def _normalize_payload(payload: td.MetaData):
     return td.MetaData(cleaned_data)
 
 
-class ClientCredentials(SimpleOAuth2Flow):
+class CredentialsFlow(SimpleOAuth2Flow):
     """
-    This `ClientCredentialsFlow` object is used
+    This `CredentialsFlow` object is used
     in server-to-server authentication. Only
     endpoints that do not access user information
     are authorized using this strategy. This
@@ -334,7 +335,7 @@ class ClientCredentials(SimpleOAuth2Flow):
         return _aquire_token(self, key, factory=factory)["access_token"]
 
 
-class Authorization(SimpleOAuth2Flow):
+class AuthorizationFlow(SimpleOAuth2Flow):
     """
     This `AuthorizationFlow` object is used in
     in app-based authentication primarily.
