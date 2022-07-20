@@ -8,7 +8,6 @@ from typing import Any, Literal, Optional, Sequence
 
 from requests import Session
 
-
 # --------------------------------------------- #
 # Generic Types.
 # --------------------------------------------- #
@@ -42,6 +41,9 @@ success or failure.
 # --------------------------------------------- #
 # Strings and Bytes.
 # --------------------------------------------- #
+
+StrOrBytes = str | bytes
+"""Either string or byte array."""
 
 CharToken = NewType("CharToken", str)
 """

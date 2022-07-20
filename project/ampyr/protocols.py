@@ -9,27 +9,6 @@ from typing import Protocol
 from ampyr import typedefs as td
 
 
-class RemoteAccessManager(Protocol):
-    """
-    Connects to some remote host or service.
-    """
-
-    @abstractmethod
-    def detach(self) -> td.ReturnState:
-        """Disconnects from the target."""
-
-    @abstractmethod
-    def attach(self) -> td.ReturnState:
-        """Connects to the target."""
-
-    @abstractmethod
-    def ping(self) -> td.ReturnState:
-        """
-        Sends a ping returning the state of the
-        target.
-        """
-
-
 class CacheManager(Protocol[td.GT]):
     """
     Brokers transactions of cached data.
@@ -64,6 +43,40 @@ class HasCacheHandler(Protocol):
     """Brokers data to/from some cache."""
 
 
+class RemoteAccessManager(Protocol):
+    """
+    Connects to some remote host or service.
+    """
+
+    @abstractmethod
+    def detach(self) -> td.ReturnState:
+        """Disconnects from the target."""
+
+    @abstractmethod
+    def attach(self) -> td.ReturnState:
+        """Connects to the target."""
+
+    @abstractmethod
+    def ping(self) -> td.ReturnState:
+        """
+        Sends a ping returning the state of the
+        target.
+        """
+
+
+class MetaConfig(Protocol):
+    """
+    Some family or group of attributes intended
+    for a specific purpose.
+    """
+
+    def asdict(self) -> td.MetaData:
+        """
+        Breaks down this `MetaConfig` into
+        a dictionary.
+        """
+
+
 class OAuth2Flow(Protocol):
     """
     Represents an Authentication Flow procedure
@@ -77,14 +90,23 @@ class OAuth2Flow(Protocol):
         """Attempt to retrieve an auth token."""
 
 
-class MetaConfig(Protocol):
+class SupportsSerialize(Protocol[td.GT]):
     """
-    Some family or group of attributes intended
-    for a specific purpose.
+    An object which can transform data to/from a
+    raw state (i.e. a string or byte array) and
+    Python objects.
     """
 
-    def asdict(self) -> td.MetaData:
+    @abstractmethod
+    def loads(self, data: td.StrOrBytes, *args, **kwds) -> td.GT:
         """
-        Breaks down this `MetaConfig` into
-        a dictionary.
+        Converts some raw state data into a
+        Python object.
+        """
+
+    @abstractmethod
+    def dumps(self, data: td.GT, *args, **kwds) -> td.StrOrBytes:
+        """
+        Converts some Python object into some raw
+        state data.
         """

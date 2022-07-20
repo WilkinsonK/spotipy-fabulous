@@ -10,6 +10,12 @@ import requests
 
 from ampyr import  protocols as pt, typedefs as td
 
+GenericFT = Callable[[td.GT], td.GT]
+"""Generic factory."""
+
+OptGenericFT = Optional[GenericFT]
+"""Optional `GenericFT`."""
+
 InstanceFT = Callable[[type[td.GT]], td.GT]
 """
 A generic factory which constructs an instance of
@@ -17,11 +23,19 @@ the given type.
 """
 
 OptInstanceFT = Optional[InstanceFT]
-"""Optional `InstanceFactory`."""
+"""Optional `InstanceFT`."""
 
 
-def basic_instance_factory(cls: type[td.GT], *args, **kwds):
+def basic_constructor_ft(cls: type[td.GT], *args, **kwds):
     return cls(*args, **kwds)
+
+
+def basic_executor_ft(func: Callable, *args, **kwds):
+    return func(*args, **kwds)
+
+
+def basic_passthrough_ft(obj: td.GT, *args, **kwds):
+    return obj
 
 
 def generic_make(
@@ -40,7 +54,7 @@ def generic_make(
 
     # Ensure a factory is used to generate an
     # instance.
-    factory = gt_factory or basic_instance_factory
+    factory = gt_factory or basic_constructor_ft
 
     return factory(gt_cls, *args, **kwds)
 
@@ -48,7 +62,8 @@ def generic_make(
 def compose(*functions: Callable[[td.GT | Any], Any]):
     """
     Defines a new callable which accepts a
-    series of functions as its procedure.
+    series of functions as its procedure
+    modifing a single object.
     """
 
     return functools.reduce((lambda func, arg: func(arg)), functions)

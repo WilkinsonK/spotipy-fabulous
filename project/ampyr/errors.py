@@ -85,13 +85,6 @@ class OAuth2HttpError(OAuth2Exception, SpotifyHttpError):
     """
 
 
-class OAuth2MaxRetriesError(OAuth2Exception):
-    """
-    Raised in the event that there were too many
-    attempts in requesting an auth token.
-    """
-
-
 class OAuth2BadStateError(OAuth2Exception):
     """
     Raised in the event where the state returned
