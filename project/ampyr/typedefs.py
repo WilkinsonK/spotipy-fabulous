@@ -3,7 +3,10 @@ Generic types used at the top level of this
 package.
 """
 
-from typing import Any, Literal, NewType, TypedDict, TypeVar
+from typing import NewType, TypedDict, TypeVar # Keep these separate.
+from typing import Any, Literal, Optional, Sequence
+
+from requests import Session
 
 
 # --------------------------------------------- #
@@ -21,6 +24,9 @@ GT_ct = TypeVar("GT_ct", contravariant=True)
 Some generic unbound contravariant `TypeVar`.
 """
 
+OptionalGT = Optional[GT]
+"""Optional generic unbound `TypeVar`."""
+
 # --------------------------------------------- #
 # Numbers and Enums.
 # --------------------------------------------- #
@@ -37,11 +43,24 @@ success or failure.
 # Strings and Bytes.
 # --------------------------------------------- #
 
-CharToken = TypeVar("CharToken", str, bytes)
+CharToken = NewType("CharToken", str)
 """
 An array of characters in sequence used typically
 for auth, identification or encryption.
 """
+
+OptString = Optional[str]
+"""Optional string."""
+
+AuthScope = str | Sequence[str]
+"""
+A string, or series of strings, used to describe
+the allowed boundaries for an application to
+access.
+"""
+
+OptAuthScope = Optional[AuthScope]
+"""Optional `AuthScope`."""
 
 # --------------------------------------------- #
 # Structures and Mappings.
@@ -53,10 +72,43 @@ Generic meta-mapping. Used for instance
 contruction.
 """
 
+OptMetaData = Optional[MetaData]
+"""Optional generic `MetaData`."""
 
-class TokenMetaData(TypedDict):
+
+class TokenMetaData(TypedDict, total=False):
     """Data related to Authentication Tokens."""
 
-    access_token: str
+    access_token:  CharToken
+    refresh_token: CharToken
+
+    grant_type: str
+    scope:      AuthScope
+
     expires_in: int
     expires_at: int
+
+
+OptTokenMetaData = Optional[TokenMetaData]
+"""Optional `TokenMetaData`."""
+
+
+class RequestHeaders(TypedDict):
+    """
+    Meta data specifically used in a `RESTful`
+    callout.
+    """
+
+
+class ResponseHeaders (TypedDict):
+    """
+    Meta data specifically used in the response
+    from a `RESTful` callout.
+    """
+
+
+OptRequestHeaders = Optional[RequestHeaders]
+"""Optional `RequestHeaders` map."""
+
+OptResponseHeaders = Optional[ResponseHeaders]
+"""Optional `RequestHeaders` map."""

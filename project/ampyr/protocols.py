@@ -64,3 +64,16 @@ class OAuth2Flow(Protocol):
     @abstractmethod
     def aquire(self) -> td.CharToken:
         """Attempt to retrieve and auth token."""
+
+
+class MetaConfig(Protocol):
+    """
+    Some family or group of attributes intended
+    for a specific purpose.
+    """
+
+    def asdict(self) -> td.MetaData:
+        """
+        Breaks down this `MetaConfig` into
+        a dictionary.
+        """

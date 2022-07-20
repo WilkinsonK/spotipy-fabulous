@@ -4,6 +4,7 @@ package.
 """
 
 import http
+from typing import Optional
 
 
 class SpotifyException(Exception):
@@ -22,7 +23,7 @@ class SpotifyHttpError(SpotifyException):
     status: http.HTTPStatus = http.HTTPStatus(500)
     """Response code from `Spotify Web API`."""
 
-    def __init__(self, *values, status: None | http.HTTPStatus = None):
+    def __init__(self, *values, status: Optional[http.HTTPStatus] = None):
         super().__init__(self, *values)
 
         # Custom http attributes.
@@ -70,7 +71,7 @@ class SpotifyNotImplementedError(SpotifyHttpError):
     status: http.HTTPStatus = http.HTTPStatus(501)
 
 
-class OAuth2Exception(Exception):
+class OAuth2Exception(SpotifyHttpError):
     """
     Raised in the event of any errors related to
     `OAuth2.0` and authentication events.
