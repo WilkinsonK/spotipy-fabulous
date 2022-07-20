@@ -3,6 +3,8 @@ Generic types used at the top level of this
 package.
 """
 
+from os import PathLike
+from pathlib import Path
 from typing import NewType, TypedDict, TypeVar # Keep these separate.
 from typing import Any, Literal, Optional, Sequence
 
@@ -63,6 +65,12 @@ access.
 
 OptAuthScope = Optional[AuthScope]
 """Optional `AuthScope`."""
+
+FilePath = Path | PathLike[str] | PathLike[bytes] | str | bytes
+"""Some path for a file location or directory."""
+
+OptFilePath = Optional[FilePath]
+"""Optional `FilePath` object."""
 
 # --------------------------------------------- #
 # Structures and Mappings.

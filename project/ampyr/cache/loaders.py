@@ -3,11 +3,11 @@ Defines behavior of brokering raw data into/from
 Python objects.
 """
 
-from ampyr import errors, factories as ft, protocols as pt, typedefs as td
+from ampyr import factories as ft, protocols as pt, typedefs as td
 
 
 def load(serializer: pt.SupportsSerialize[td.GT], data: td.StrOrBytes, *,
-    factory: ft.OptGenericFT = None) -> td.GT:
+    factory: ft.OptGenericFT[td.GT] = None) -> td.GT:
     """
     Loads raw `data` using some `serializer`.
 

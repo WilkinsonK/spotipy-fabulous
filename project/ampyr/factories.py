@@ -13,7 +13,7 @@ from ampyr import  protocols as pt, typedefs as td
 GenericFT = Callable[[td.GT], td.GT]
 """Generic factory."""
 
-OptGenericFT = Optional[GenericFT]
+OptGenericFT = Optional[GenericFT[td.GT]]
 """Optional `GenericFT`."""
 
 InstanceFT = Callable[[type[td.GT]], td.GT]
