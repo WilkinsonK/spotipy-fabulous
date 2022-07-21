@@ -141,9 +141,12 @@ class FileCacheManager(LocalDataCacheManager[td.GT]):
 
 
 def _open_shelf(filepath: str) -> shelve.Shelf[td.StrOrBytes]:
-    """Open's a shelf in context."""
+    """
+    Open's a shelf in context.
+    NOTE: Must close manually.
+    """
 
-    return shelve.open(filepath)
+    return shelve.open(filepath) #type: ignore[return-value]
 
 
 class ShelfCacheManager(LocalDataCacheManager[td.GT]):
@@ -185,6 +188,7 @@ class ShelfCacheManager(LocalDataCacheManager[td.GT]):
 
         with _open_shelf(str(self.data_location)) as db:
             found = db.get(key, None)
+            db.close()
 
         if not found:
             return None
@@ -193,4 +197,5 @@ class ShelfCacheManager(LocalDataCacheManager[td.GT]):
     def save(self, key: str, data: td.GT):
         with _open_shelf(str(self.data_location)) as db:
             db[key] = loaders.dump(self.serializer, data)
+            db.close()
         return data
