@@ -45,7 +45,7 @@ class SimpleOAuth2Flow(pt.OAuth2Flow):
     Warning: Not meant to be used directly.
     """
 
-    cache_manager: pt.CacheManager
+    cache_manager: pt.CacheManager[td.TokenMetaData]
     """
     Interacts with some cache that is expected to
     store token data.
@@ -125,7 +125,7 @@ class SimpleOAuth2Flow(pt.OAuth2Flow):
 
         # Cache manager construction components.
         # TODO: define basic cache classes.
-        self.cache_class   = cache_class or cache.MemoryCacheManager
+        self.cache_class   = cache_class or cache.NullCacheManager
         self.cache_factory = cache_factory
 
         # Session construction components.
@@ -237,7 +237,7 @@ def _aquire_token(flow: SimpleOAuth2Flow, key: str, *,
     data = _request_token(flow, payload)
     if data and "scope" not in data:
         data["scope"] = scope
-    flow.cache_manager.save(key, data)
+    flow.cache_manager.save(key, data) #type: ignore[arg-type]
 
     return _aquire_token(flow, key, factory=factory)
 
