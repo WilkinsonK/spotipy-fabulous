@@ -140,18 +140,10 @@ class FileCacheManager(LocalDataCacheManager[td.GT]):
             fd.write(tools.build_keypair(self.join_char, key, dump))
 
 
-ShelfGenerator = td.Generator[shelve.Shelf[td.GT], None, None]
-
-
-@contextlib.contextmanager
-def _open_shelf(filepath: str) -> ShelfGenerator[td.StrOrBytes]:
+def _open_shelf(filepath: str) -> shelve.Shelf[td.StrOrBytes]:
     """Open's a shelf in context."""
 
-    try:
-        shelf = shelve.open(filepath)
-        yield shelf #type: ignore[misc]
-    finally:
-        shelf.clear()
+    return shelve.open(filepath)
 
 
 class ShelfCacheManager(LocalDataCacheManager[td.GT]):
@@ -165,6 +157,11 @@ class ShelfCacheManager(LocalDataCacheManager[td.GT]):
     @property
     def fileexists(self):
         path = self.data_location
+
+        # If is single file db instance.
+        temp_path = ".".join([path, "db"])
+        if os.path.exists(temp_path):
+            return True
 
         # shelve module generates multiple files.
         for ext in ("dat", "dir", "bak"):
@@ -195,6 +192,5 @@ class ShelfCacheManager(LocalDataCacheManager[td.GT]):
 
     def save(self, key: str, data: td.GT):
         with _open_shelf(str(self.data_location)) as db:
-            dump = loaders.dump(self.serializer, data)
-            db[key] = dump
+            db[key] = loaders.dump(self.serializer, data)
         return data

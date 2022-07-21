@@ -13,10 +13,10 @@ class NullLoader(pt.SupportsSerialize[td.GT]):
     wanted.
     """
 
-    def loads(data, *args, **kwds):
+    def loads(self, data, *args, **kwds):
         return data
 
-    def dumps(data, *args, **kwds):
+    def dumps(self, data, *args, **kwds):
         return data
 
 

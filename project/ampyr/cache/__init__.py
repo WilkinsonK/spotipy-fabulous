@@ -1,1 +1,3 @@
-from ampyr.cache.managers import NullCacheManager, MemoryCacheManager
+from ampyr.cache.managers import \
+    NullCacheManager, MemoryCacheManager, FileCacheManager, \
+    ShelfCacheManager
