@@ -180,7 +180,7 @@ class AuthorizationFlow(base.SimpleOAuth2Flow):
     oauth token request.
     """
 
-    oauth_code: None | int
+    oauth_code: td.Optional[int]
     """
     Code representing the state of
     authentication.
@@ -190,9 +190,9 @@ class AuthorizationFlow(base.SimpleOAuth2Flow):
 
     @property #type: ignore[override]
     def url_for_oauth(self):
-        params = td.MetaData({
+        params = {
             k:v for k,v in self.auth_config.asdict().items()
-            if k in self.oauth_param_keys})
+            if k in self.oauth_param_keys}
 
         params["redirect_uri"]  = self.auth_config.url_for_redirect
         params["show_dialogue"] = self.show_dialogue
@@ -226,3 +226,81 @@ class AuthorizationFlow(base.SimpleOAuth2Flow):
         # Attributes used for browser behavior.
         self.show_dialogue = show_dialogue
         self.oauth_code    = None
+
+
+class PKCEFlow(base.SimpleOAuth2Flow):
+    """
+    Proof Key for Code Exchange.
+
+    This `PKCEFlow` object is used for `user` and
+    `non-user` endpoints. When this auth flow
+    requests access for the first time, a target
+    user will be prompted for approval.
+
+    This is the recommended strategy for
+    mobile/desktop applications.
+    """
+
+    oauth_param_keys: tuple[str, ...] = (
+        "client_id",
+        "redirect_uri",
+        "code_challenge",
+        "scope",
+        "state",
+        "code_challenge_method",
+        "response_type")
+    """
+    Sequence of names expected to be used in an
+    oauth token request.
+    """
+
+    oauth_challenge_method: str = "S256" # SHA256
+    """
+    Method of encryption used for validating
+    token requests.
+    """
+
+    oauth_code: td.Optional[int]
+    """
+    Code representing the state of
+    authentication.
+    """
+
+    @property #type: ignore[override]
+    def url_for_oauth(self):
+        params = {
+            k:v for k,v in self.auth_config.asdict().items()
+            if k in self.oauth_param_keys}
+
+        params["redirect_uri"]          = self.auth_config.url_for_redirect
+        params["response_type"]         = "code"
+        params["code_challenge_method"] = self.oauth_challenge_method
+
+        base = getattr(self, "_url_for_oauth")
+        return _make_param_url(base, params)
+
+    @url_for_oauth.setter
+    def url_for_oauth(self, value):
+        setattr(self, "_url_for_oauth", value)
+
+    def aquire(self):
+        key = _make_search_key(self.auth_config, "pkce")
+
+        def factory():
+            if not self.oauth_code:
+                self.oauth_code = hosts.get_user_auth(self)
+            return _normalize_payload({
+                "redirect_uri": self.auth_config.url_for_redirect,
+                "grant_type": "authorization_code",
+                "code": self.oauth_code,
+                "client_id": self.auth_config.client_id,
+                "code_verifier": self.auth_config.code_verifier})
+
+        return _aquire_token(self, key, factory=factory)["access_token"]
+
+    def __init__(self, *args, **kwds):
+        super().__init__(*args, **kwds)
+
+        self.requests_config.headers.update({
+            "Content-Type": "application/x-www-form-urlencoded"})
+        self.oauth_code = None
