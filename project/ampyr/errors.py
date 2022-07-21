@@ -85,9 +85,16 @@ class OAuth2HttpError(OAuth2Exception, SpotifyHttpError):
     """
 
 
-class OAuth2BadStateError(OAuth2Exception):
+class OAuth2BadStateError(OAuth2HttpError):
     """
     Raised in the event where the state returned
     from a token request is not the same as
     what was expected.
+    """
+
+
+class OAuthValueError(OAuth2Exception):
+    """
+    Raised in the event of some value either
+    being missing or invalid.
     """

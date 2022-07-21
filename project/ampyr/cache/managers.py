@@ -4,7 +4,7 @@ classes as handlers for brokering data to/from
 some cache.
 """
 
-import contextlib, os, shelve
+import json, os, shelve
 
 from ampyr import protocols as pt, typedefs as td
 from ampyr.cache import loaders, tools
@@ -36,7 +36,11 @@ class SimpleCacheManager(pt.CacheManager[td.GT]):
         sub_ids: td.Optional[tuple[td.StrOrBytes, ...]] = None):
         """Construct a new `CacheManager`."""
 
-        self.serializer = serializer or loaders.NullLoader()
+        self.serializer = (
+            serializer
+            or getattr(self, "serializer", None)
+            or loaders.NullLoader())
+
         self.sub_ids    = sub_ids or ()
 
 
@@ -96,8 +100,9 @@ class LocalDataCacheManager(SimpleCacheManager[td.GT]):
         serializer: td.Optional[pt.SupportsSerialize] = None,
         sub_ids: td.Optional[tuple[td.StrOrBytes, ...]]= None):
 
-        super().__init__(serializer=serializer, sub_ids=sub_ids)
-
+        super().__init__(
+            serializer=serializer,
+            sub_ids=sub_ids)
         self.data_location = tools.get_cache_path(data_location)
 
 
@@ -109,6 +114,8 @@ class FileCacheManager(LocalDataCacheManager[td.GT]):
     The intended purpose for this object is to
     serve single record use.
     """
+
+    serializer: pt.SupportsSerialize[td.GT] = json
 
     join_char: str = ":"
     """
