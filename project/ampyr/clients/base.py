@@ -1,0 +1,86 @@
+"""
+Defines basic behavior of objects responsible for
+brokering calls to/from a target `Web API`.
+"""
+
+from ampyr import factories as ft, protocols as pt, typedefs as td
+from ampyr import oauth2
+
+
+class SimpleRESTDriver(pt.RESTDriver):
+    """
+    Defines basic behavior such as construction
+    of this and derivitive types.
+    """
+
+
+class NullRESTDriver(SimpleRESTDriver):
+    """
+    This Driver effectively does nothing, hence
+    the title `NullRESTDriver`. For each of it's
+    methods, theif functionalities are defined
+    to make no modifications to their inputs
+    and/or return nothing.
+    """
+
+    def make_payload(self, data: td.OptRequestHeaders = None):
+        if not data:
+            return td.RequestHeaders()
+        return data
+
+    def make_url(self, *, requires_idn: td.Optional[bool] = None):
+        return ""
+
+
+class SimpleRESTClient(pt.RESTClient):
+    """
+    Defines basic behavior such as construction
+    of this and derivitive types.
+    """
+
+    driver_class: type[pt.RESTDriver]
+    """
+    Class used to construct `RESTDriver` objects.
+    """
+
+    driver_factory: ft.OptRESTDriverFT
+    """
+    Factory procedure used to create internal
+    `RESTDriver` objects.
+    """
+
+    driver: pt.RESTDriver
+    """
+    Internal functionality for handling REST
+    construction.
+    """
+
+    oauth2flow_class: type[pt.OAuth2Flow]
+    """
+    Class used to create `OAuth2Flow` manager.
+    """
+
+    def __init_subclass__(cls, driver=None, **kwds) -> None:
+        """
+        Construct this type of `RESTClient`.
+        """
+
+        super().__init_subclass__(**kwds)
+
+        cls.driver_class = driver or NullRESTDriver
+
+    # Need:
+    # 1. Base url
+    # 2. Base auth/token urls (optional)
+    # 3. OAuth credentials
+    #   a. client_id
+    #   b. client_secret
+    #   c. client_username/id
+    # 4. Driver construction factory (optional)
+    def __init__(self, *,
+        oauth2flow: td.Optional[type[pt.OAuth2Flow]] = None,
+        client_id: td.Optional[str] = None,
+        client_secret: td.Optional[str] = None,
+        client_userid: td.Optional[str] = None,
+        driver_factory: ft.OptRESTDriverFT = None):
+        ...

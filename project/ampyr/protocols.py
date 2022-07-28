@@ -110,3 +110,30 @@ class SupportsSerialize(Protocol[td.GT]):
         Converts some Python object into some raw
         state data.
         """
+
+
+class RESTDriver(Protocol):
+    """
+    Responsible for handling internal
+    functionality. Such as rendering URL strings
+    or constructing data payloads.
+    """
+
+    def make_payload(self, data: td.OptRequestHeaders) -> td.RequestHeaders:
+        """
+        Properly constructs a mapping usable by
+        the target RESTful `Web API`.
+        """
+
+    def make_url(self, *, requires_idn: td.Optional[bool]) -> str:
+        """
+        Properly constructs a url path usable by
+        the target RESTful `Web API`.
+        """
+
+
+class RESTClient(Protocol):
+    """
+    Broker object for making calls to the target
+    RESTful `Web API`.
+    """

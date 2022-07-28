@@ -137,6 +137,19 @@ def _normalize_payload(payload: td.MetaData):
     return td.MetaData(cleaned_data)
 
 
+class NullFlow(base.SimpleOAuth2Flow):
+    """
+    Effectively does nothing. This object acts as
+    a placeholder in the event no `OAuth2Flow`
+    object or type was provided. It's subsequent
+    methods act without modifying it's inputs, or
+    returning empty or null data.
+    """
+
+    def aquire(self):
+        return td.NotAToken
+
+
 class CredentialsFlow(base.SimpleOAuth2Flow):
     """
     This `CredentialsFlow` object is used

@@ -1,1 +1,2 @@
-from ampyr.oauth2.flows import CredentialsFlow, AuthorizationFlow, PKCEFlow
+from ampyr.oauth2.flows import CredentialsFlow, AuthorizationFlow, PKCEFlow, \
+    NullFlow

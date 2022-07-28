@@ -103,3 +103,11 @@ mapping.
 
 OptTokenMetaDataFT = Optional[TokenMetaDataFT]
 """Optional `TokenMetaDataFT`."""
+
+RESTDriverFT = Callable[[type[pt.RESTDriver]], pt.RESTDriver]
+"""
+Factory which constructs a `RESTDriver` object.
+"""
+
+OptRESTDriverFT = Optional[RESTDriverFT]
+"""Optional `RESTDriverFT`."""

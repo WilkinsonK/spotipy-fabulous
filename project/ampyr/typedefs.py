@@ -3,6 +3,7 @@ Generic types used at the top level of this
 package.
 """
 
+import enum
 from os import PathLike
 from pathlib import Path
 from typing import NewType, TypedDict, TypeVar # Keep these separate.
@@ -32,13 +33,17 @@ OptionalGT = Optional[GT]
 # Numbers and Enums.
 # --------------------------------------------- #
 
-IntSuccess = Literal[0]
-IntFailure = Literal[1]
-ReturnState = Literal[IntSuccess, IntFailure]
-"""
-Integer values representing states of
-success or failure.
-"""
+IntSuccess = 0
+IntFailure = 1
+
+class ReturnState(enum.IntEnum):
+    """
+    Integer values representing states of
+    success or failure.
+    """
+
+    SUCCESS = IntSuccess
+    FAILURE = IntFailure
 
 # --------------------------------------------- #
 # Strings and Bytes.
@@ -51,6 +56,12 @@ CharToken = NewType("CharToken", str)
 """
 An array of characters in sequence used typically
 for auth, identification or encryption.
+"""
+
+NotAToken = CharToken("NotAToken")
+"""
+String value representing a Non-`CharToken` or
+simply an empty `CharToken`.
 """
 
 OptString = Optional[str]
@@ -103,14 +114,14 @@ OptTokenMetaData = Optional[TokenMetaData]
 """Optional `TokenMetaData`."""
 
 
-class RequestHeaders(TypedDict):
+class RequestHeaders(TypedDict, total=False):
     """
     Meta data specifically used in a `RESTful`
     callout.
     """
 
 
-class ResponseHeaders (TypedDict):
+class ResponseHeaders(TypedDict, total=False):
     """
     Meta data specifically used in the response
     from a `RESTful` callout.
