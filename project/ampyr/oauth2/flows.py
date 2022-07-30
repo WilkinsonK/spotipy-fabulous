@@ -101,7 +101,7 @@ def _make_search_key(config: configs.AuthConfig, default: td.OptString = None):
     credentials object.
     """
 
-    name = config.client_username or default or "credentials"
+    name = config.client_userid or default or "credentials"
     return "{}[{}]".format(name, config.client_id)
 
 

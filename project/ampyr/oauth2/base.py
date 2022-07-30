@@ -80,7 +80,7 @@ class SimpleOAuth2Flow(pt.OAuth2Flow):
         return
 
     def __init__(self, client_id: str, client_secret: str,
-        client_username: td.OptString = None, *,
+        client_userid: td.OptString = None, *,
         cache_class: td.Optional[type[pt.CacheManager]] = None,
         cache_factory: ft.OptCacheFT = None,
         session_factory: ft.OptSessionFT = None,
@@ -97,7 +97,7 @@ class SimpleOAuth2Flow(pt.OAuth2Flow):
         self._new_auth_config(
             client_id,
             client_secret,
-            client_username=client_username,
+            client_userid=client_userid,
             url_for_redirect=url_for_redirect or DEFAULT_OAUTH_URL,
             scope=tokens.normalize_scope(scope or ""),
             state=state)

@@ -38,27 +38,20 @@ class SimpleRESTClient(pt.RESTClient):
     of this and derivitive types.
     """
 
-    driver_class: type[pt.RESTDriver]
-    """
-    Class used to construct `RESTDriver` objects.
-    """
-
-    driver_factory: ft.OptRESTDriverFT
-    """
-    Factory procedure used to create internal
-    `RESTDriver` objects.
-    """
-
     driver: pt.RESTDriver
     """
     Internal functionality for handling REST
     construction.
     """
 
-    oauth2flow_class: type[pt.OAuth2Flow]
+    oauth2flow: pt.OAuth2Flow
     """
-    Class used to create `OAuth2Flow` manager.
+    Internal functionality for brokering calls
+    to the authentication host.
     """
+
+    __driver_class__:   type[pt.RESTDriver]
+    __driver_factory__: ft.OptRESTDriverFT
 
     def __init_subclass__(cls, driver=None, **kwds) -> None:
         """
@@ -67,7 +60,7 @@ class SimpleRESTClient(pt.RESTClient):
 
         super().__init_subclass__(**kwds)
 
-        cls.driver_class = driver or NullRESTDriver
+        cls.__driver_class__ = driver or NullRESTDriver
 
     # Need:
     # 1. Base url
@@ -81,6 +74,7 @@ class SimpleRESTClient(pt.RESTClient):
         oauth2flow: td.Optional[type[pt.OAuth2Flow]] = None,
         client_id: td.Optional[str] = None,
         client_secret: td.Optional[str] = None,
-        client_userid: td.Optional[str] = None,
         driver_factory: ft.OptRESTDriverFT = None):
-        ...
+        """Construct a `RESTClient`."""
+
+        self.__driver_factory__ = driver_factory

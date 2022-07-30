@@ -25,7 +25,7 @@ class AuthConfig(SimpleConfig):
     code_verifier: str
 
     # Required, but not mandatory.
-    client_username:  td.OptString
+    client_userid:    td.OptString
     url_for_redirect: td.OptString
 
     # Optional.
