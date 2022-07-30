@@ -111,3 +111,11 @@ Factory which constructs a `RESTDriver` object.
 
 OptRESTDriverFT = Optional[RESTDriverFT]
 """Optional `RESTDriverFT`."""
+
+OAuth2FlowFT = Callable[[type[pt.OAuth2Flow]], pt.OAuth2Flow]
+"""
+Factory which constructs a `RESTDriver` object.
+"""
+
+OptOAuth2FlowFT = Optional[OAuth2FlowFT]
+"""Optional `OAuth2FlowFT`."""

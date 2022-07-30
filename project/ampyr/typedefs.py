@@ -7,7 +7,7 @@ import enum
 from os import PathLike
 from pathlib import Path
 from typing import NewType, TypedDict, TypeVar # Keep these separate.
-from typing import Any, Literal, Optional, Sequence
+from typing import Any, Optional, Sequence
 
 from requests import Session
 
